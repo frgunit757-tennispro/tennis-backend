@@ -20,7 +20,7 @@ app.add_middleware(
 )
 
 # ─── Загрузка данных ───
-DATA = Path("data")
+DATA = Path(".")
 ratings_df: pd.DataFrame = None
 atp_df:     pd.DataFrame = None
 model_bundle: dict = None
