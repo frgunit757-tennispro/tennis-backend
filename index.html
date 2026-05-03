@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Tennis Analyzer</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0f1117;
+  --card: #1c2030;
+  --header: #1a1f2e;
+  --accent: #7c8dff;
+  --green: #4ade80;
+  --amber: #fbbf24;
+  --red: #f87171;
+  --text: #e8eaf6;
+  --muted: #8b8fa8;
+  --border: #2d3555;
+  --radius: 14px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  min-height: 100vh;
+  padding-bottom: 70px;
+}
+
+/* NAV */
+.nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--header);
+  display: flex;
+  padding: 8px 0 12px;
+  z-index: 100;
+  border-top: 0.5px solid var(--border);
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; gap: 3px;
+  font-size: 10px; color: var(--muted);
+  cursor: pointer; padding: 4px;
+  border-radius: 10px; transition: color .15s;
+}
+.nav-item.active { color: var(--accent); }
+.nav-icon { font-size: 20px; }
+
+/* PAGES */
+.page { display: none; padding: 0 0 12px; }
+.page.active { display: block; }
+
+/* HEADER */
+.page-header {
+  background: var(--header);
+  padding: 14px 16px 12px;
+  display: flex; align-items: center; gap: 12px;
+  position: sticky; top: 0; z-index: 10;
+  border-bottom: 0.5px solid var(--border);
+}
+.page-header-icon {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.page-header h1 { font-size: 16px; font-weight: 600; }
+.page-header p { font-size: 11px; color: var(--muted); }
+
+/* SURF PILLS */
+.surf-row {
+  display: flex; gap: 8px;
+  padding: 10px 14px 6px;
+  overflow-x: auto;
+}
+.surf-pill {
+  flex-shrink: 0;
+  padding: 6px 16px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; border: none;
+  background: var(--card); color: var(--muted);
+  transition: all .15s;
+}
+.surf-pill.active { background: var(--border); color: var(--accent); }
+
+/* CARDS */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  margin: 0 12px 10px;
+  padding: 12px 14px;
+}
+
+/* PLAYER ROW */
+.player-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 0;
+  border-bottom: 0.5px solid var(--border);
+}
+.player-row:last-child { border: none; }
+.rank { width: 18px; font-size: 11px; color: var(--muted); }
+.avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; flex-shrink: 0;
+}
+.pname { font-size: 13px; font-weight: 500; }
+.pmeta { font-size: 10px; color: var(--muted); }
+.elo-badge {
+  margin-left: auto;
+  font-size: 13px; font-weight: 700; color: var(--accent);
+}
+
+/* SECTION LABEL */
+.section-label {
+  font-size: 10px; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase;
+  color: var(--muted);
+  padding: 10px 14px 4px;
+}
+
+/* INPUTS */
+.input-wrap { margin: 0 12px 8px; position: relative; }
+.search-input {
+  width: 100%;
+  background: var(--card);
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 14px; color: var(--text);
+  outline: none;
+}
+.search-input:focus { border-color: var(--accent); }
+.search-input::placeholder { color: var(--muted); }
+
+/* DROPDOWN */
+.dropdown {
+  background: var(--header);
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+  max-height: 160px; overflow-y: auto;
+  margin: 0 12px 8px;
+  display: none;
+}
+.dropdown.open { display: block; }
+.dropdown-item {
+  padding: 10px 14px;
+  font-size: 13px; cursor: pointer;
+  border-bottom: 0.5px solid var(--border);
+  transition: background .1s;
+}
+.dropdown-item:last-child { border: none; }
+.dropdown-item:hover { background: var(--border); }
+
+/* BIG BUTTON */
+.btn-primary {
+  display: block; width: calc(100% - 24px);
+  margin: 8px 12px;
+  background: var(--accent);
+  color: #fff; font-size: 14px; font-weight: 600;
+  padding: 13px; border-radius: 14px;
+  border: none; cursor: pointer;
+  transition: opacity .15s;
+}
+.btn-primary:active { opacity: .8; }
+.btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+
+/* PREDICT RESULT */
+.predict-result { display: none; }
+.predict-result.show { display: block; }
+
+.vs-block {
+  display: flex; justify-content: space-between;
+  align-items: center; gap: 8px;
+  padding: 14px 0 10px;
+}
+.vs-player { flex: 1; text-align: center; }
+.vs-label { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+.vs-prob { font-size: 28px; font-weight: 700; }
+.vs-sep { color: var(--muted); font-size: 13px; }
+
+.prob-track {
+  height: 8px; background: var(--border);
+  border-radius: 4px; overflow: hidden; margin: 6px 0 14px;
+}
+.prob-fill-p1 { height: 100%; border-radius: 4px; background: var(--accent); transition: width .6s ease; }
+
+.stats-row {
+  display: flex; justify-content: space-between;
+  margin-top: 6px;
+}
+.stat-item { text-align: center; flex: 1; }
+.stat-label { font-size: 9px; color: var(--muted); margin-bottom: 3px; }
+.stat-val { font-size: 12px; font-weight: 600; }
+
+.badge {
+  display: inline-block;
+  font-size: 10px; font-weight: 600;
+  padding: 3px 10px; border-radius: 20px;
+}
+.badge-green { background: #1a3a2a; color: var(--green); }
+.badge-amber { background: #3a2a10; color: var(--amber); }
+.badge-red   { background: #3a1010; color: var(--red); }
+
+/* H2H */
+.h2h-score {
+  display: flex; justify-content: space-between;
+  align-items: center; padding: 10px 0 14px;
+}
+.h2h-num { font-size: 36px; font-weight: 700; }
+.h2h-name { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+.stat-compare-row {
+  display: flex; align-items: center;
+  gap: 6px; margin-bottom: 10px; font-size: 11px;
+}
+.sc-val { width: 36px; font-weight: 600; }
+.sc-label { font-size: 10px; color: var(--muted); flex: 1; text-align: center; }
+.sc-track { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.sc-fill { height: 100%; border-radius: 3px; transition: width .5s ease; }
+
+.match-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0;
+  border-bottom: 0.5px solid var(--border);
+  font-size: 12px;
+}
+.match-row:last-child { border: none; }
+.match-info { color: var(--muted); font-size: 11px; }
+
+/* LOADING */
+.loading {
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px; color: var(--muted); font-size: 13px;
+}
+
+/* SETTINGS */
+.setting-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 0;
+  border-bottom: 0.5px solid var(--border);
+}
+.setting-row:last-child { border: none; }
+.setting-label { font-size: 14px; }
+.setting-sub { font-size: 11px; color: var(--muted); }
+.toggle {
+  width: 44px; height: 24px; border-radius: 12px;
+  background: var(--accent); border: none; cursor: pointer;
+  position: relative; transition: background .2s;
+}
+.toggle::after {
+  content: ''; position: absolute;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; top: 3px; right: 3px;
+  transition: right .2s;
+}
+.toggle.off { background: var(--border); }
+.toggle.off::after { right: auto; left: 3px; }
+</style>
+</head>
+<body>
+
+<!-- PAGE: RATINGS -->
+<div class="page active" id="page-ratings">
+  <div class="page-header">
+    <div class="page-header-icon">🏆</div>
+    <div><h1>Рейтинг ATP</h1><p>Elo по покрытию</p></div>
+  </div>
+  <div class="surf-row" id="rating-surfs">
+    <button class="surf-pill active" data-surf="hard">Хард</button>
+    <button class="surf-pill" data-surf="clay">Грунт</button>
+    <button class="surf-pill" data-surf="grass">Трава</button>
+  </div>
+  <div class="card" id="ratings-list">
+    <div class="loading">Загрузка...</div>
+  </div>
+</div>
+
+<!-- PAGE: PREDICT -->
+<div class="page" id="page-predict">
+  <div class="page-header">
+    <div class="page-header-icon">🔮</div>
+    <div><h1>Прогноз матча</h1><p>Введи двух игроков</p></div>
+  </div>
+
+  <div class="section-label">Игрок 1</div>
+  <div class="input-wrap">
+    <input class="search-input" id="input-p1" placeholder="Начни вводить фамилию..." autocomplete="off">
+  </div>
+  <div class="dropdown" id="drop-p1"></div>
+
+  <div class="section-label">Игрок 2</div>
+  <div class="input-wrap">
+    <input class="search-input" id="input-p2" placeholder="Начни вводить фамилию..." autocomplete="off">
+  </div>
+  <div class="dropdown" id="drop-p2"></div>
+
+  <div class="section-label">Покрытие</div>
+  <div class="surf-row" id="predict-surfs">
+    <button class="surf-pill active" data-surf="hard">Хард</button>
+    <button class="surf-pill" data-surf="clay">Грунт</button>
+    <button class="surf-pill" data-surf="grass">Трава</button>
+  </div>
+
+  <button class="btn-primary" id="btn-predict" disabled>Рассчитать прогноз</button>
+
+  <div class="predict-result" id="predict-result">
+    <div class="card">
+      <div class="vs-block">
+        <div class="vs-player">
+          <div class="vs-label" id="res-name1">—</div>
+          <div class="vs-prob" id="res-prob1" style="color:var(--accent)">—</div>
+        </div>
+        <div class="vs-sep">VS</div>
+        <div class="vs-player">
+          <div class="vs-label" id="res-name2">—</div>
+          <div class="vs-prob" id="res-prob2" style="color:var(--green)">—</div>
+        </div>
+      </div>
+      <div class="prob-track"><div class="prob-fill-p1" id="res-bar" style="width:50%"></div></div>
+      <div class="stats-row">
+        <div class="stat-item">
+          <div class="stat-label">Elo P1</div>
+          <div class="stat-val" id="res-elo1">—</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Elo P2</div>
+          <div class="stat-val" id="res-elo2">—</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Форма P1</div>
+          <div class="stat-val" id="res-form1">—</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Уверенность</div>
+          <div class="stat-val" id="res-conf">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Совет по ставке</div>
+    <div class="card" id="bet-advice"></div>
+  </div>
+</div>
+
+<!-- PAGE: H2H -->
+<div class="page" id="page-h2h">
+  <div class="page-header">
+    <div class="page-header-icon">⚔️</div>
+    <div><h1>Head to Head</h1><p>История встреч</p></div>
+  </div>
+
+  <div class="section-label">Игрок 1</div>
+  <div class="input-wrap">
+    <input class="search-input" id="h2h-input-p1" placeholder="Фамилия игрока..." autocomplete="off">
+  </div>
+  <div class="dropdown" id="h2h-drop-p1"></div>
+
+  <div class="section-label">Игрок 2</div>
+  <div class="input-wrap">
+    <input class="search-input" id="h2h-input-p2" placeholder="Фамилия игрока..." autocomplete="off">
+  </div>
+  <div class="dropdown" id="h2h-drop-p2"></div>
+
+  <button class="btn-primary" id="btn-h2h" disabled>Показать H2H</button>
+  <div id="h2h-result"></div>
+</div>
+
+<!-- PAGE: SETTINGS -->
+<div class="page" id="page-settings">
+  <div class="page-header">
+    <div class="page-header-icon">⚙️</div>
+    <div><h1>Настройки</h1><p>Tennis Analyzer</p></div>
+  </div>
+  <div class="card">
+    <div class="setting-row">
+      <div><div class="setting-label">Уведомления</div><div class="setting-sub">Важные матчи топ-10</div></div>
+      <button class="toggle" id="toggle-notif"></button>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">Только высокая уверенность</div><div class="setting-sub">Показывать прогнозы >70%</div></div>
+      <button class="toggle off" id="toggle-highconf"></button>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">Показывать советы</div><div class="setting-sub">Рекомендации по ставкам</div></div>
+      <button class="toggle" id="toggle-tips"></button>
+    </div>
+  </div>
+  <div class="section-label">О приложении</div>
+  <div class="card">
+    <div class="setting-row">
+      <div><div class="setting-label">Данные</div></div>
+      <span style="color:var(--muted);font-size:12px">ATP 2015–2025</span>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">Точность модели</div></div>
+      <span style="color:var(--green);font-size:12px;font-weight:600">~68%</span>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">Версия</div></div>
+      <span style="color:var(--muted);font-size:12px">1.0.0</span>
+    </div>
+  </div>
+  <div style="padding:16px;text-align:center;color:var(--muted);font-size:11px;line-height:1.6">
+    Прогнозы основаны на статистике.<br>Не является финансовым советом.
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="nav">
+  <div class="nav-item active" data-page="ratings">
+    <span class="nav-icon">🏆</span><span>Рейтинг</span>
+  </div>
+  <div class="nav-item" data-page="predict">
+    <span class="nav-icon">🔮</span><span>Прогноз</span>
+  </div>
+  <div class="nav-item" data-page="h2h">
+    <span class="nav-icon">⚔️</span><span>H2H</span>
+  </div>
+  <div class="nav-item" data-page="settings">
+    <span class="nav-icon">⚙️</span><span>Настройки</span>
+  </div>
+</nav>
+
+<script>
+const API = 'https://https://tennis-backend-9zwn.onrender.com';  // ← заменишь на свой URL
+
+// Telegram WebApp init
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+
+// ─── Navigation ───
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const page = item.dataset.page;
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById('page-' + page).classList.add('active');
+  });
+});
+
+// ─── Surface pills ───
+function initSurfPills(containerId, callback) {
+  const container = document.getElementById(containerId);
+  container.querySelectorAll('.surf-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      container.querySelectorAll('.surf-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      callback(pill.dataset.surf);
+    });
+  });
+}
+
+// ─── Ratings Page ───
+let currentSurf = 'hard';
+const avatarColors = [
+  ['#2d3a5e','#7c8dff'], ['#1a3a2a','#4ade80'], ['#3a1a2a','#f472b6'],
+  ['#3a2a10','#fbbf24'], ['#2a1a3a','#c084fc'], ['#3a1010','#f87171'],
+  ['#1a2a3a','#60a5fa'], ['#2a3a1a','#86efac'], ['#3a3a1a','#fde68a'],
+  ['#1a3a3a','#5eead4'],
+];
+
+async function loadRatings(surf) {
+  const el = document.getElementById('ratings-list');
+  el.innerHTML = '<div class="loading">Загрузка...</div>';
+  try {
+    const res = await fetch(`${API}/ratings?surface=${surf}`);
+    const data = await res.json();
+    el.innerHTML = data.slice(0, 20).map((p, i) => {
+      const [bg, fg] = avatarColors[i % avatarColors.length];
+      const initials = p.player.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      const formPct = Math.round(p.form * 100);
+      return `
+        <div class="player-row">
+          <span class="rank">#${i+1}</span>
+          <div class="avatar" style="background:${bg};color:${fg}">${initials}</div>
+          <div>
+            <div class="pname">${p.player}</div>
+            <div class="pmeta">форма ${formPct}% · ${p.matches_total} матчей</div>
+          </div>
+          <div class="elo-badge">${Math.round(p.elo)}</div>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="loading">Ошибка загрузки. Проверь сервер.</div>';
+  }
+}
+
+initSurfPills('rating-surfs', surf => { currentSurf = surf; loadRatings(surf); });
+loadRatings('hard');
+
+// ─── Player Search Autocomplete ───
+let allPlayers = [];
+async function loadPlayers() {
+  try {
+    const res = await fetch(`${API}/players`);
+    allPlayers = await res.json();
+  } catch(e) { allPlayers = []; }
+}
+loadPlayers();
+
+function setupAutocomplete(inputId, dropId, onSelect) {
+  const input = document.getElementById(inputId);
+  const drop = document.getElementById(dropId);
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    if (q.length < 2) { drop.classList.remove('open'); return; }
+    const matches = allPlayers.filter(p => p.toLowerCase().includes(q)).slice(0, 8);
+    if (!matches.length) { drop.classList.remove('open'); return; }
+    drop.innerHTML = matches.map(p =>
+      `<div class="dropdown-item">${p}</div>`
+    ).join('');
+    drop.classList.add('open');
+    drop.querySelectorAll('.dropdown-item').forEach(item => {
+      item.addEventListener('click', () => {
+        input.value = item.textContent;
+        drop.classList.remove('open');
+        onSelect(item.textContent);
+      });
+    });
+  });
+  document.addEventListener('click', e => {
+    if (!input.contains(e.target) && !drop.contains(e.target)) drop.classList.remove('open');
+  });
+}
+
+// ─── Predict Page ───
+let p1Selected = '', p2Selected = '', predictSurf = 'hard';
+
+setupAutocomplete('input-p1', 'drop-p1', name => {
+  p1Selected = name; checkPredictReady();
+});
+setupAutocomplete('input-p2', 'drop-p2', name => {
+  p2Selected = name; checkPredictReady();
+});
+initSurfPills('predict-surfs', s => { predictSurf = s; });
+
+document.getElementById('input-p1').addEventListener('input', () => { p1Selected = ''; checkPredictReady(); });
+document.getElementById('input-p2').addEventListener('input', () => { p2Selected = ''; checkPredictReady(); });
+
+function checkPredictReady() {
+  document.getElementById('btn-predict').disabled = !(p1Selected && p2Selected);
+}
+
+document.getElementById('btn-predict').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-predict');
+  btn.textContent = 'Считаю...'; btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/predict?p1=${encodeURIComponent(p1Selected)}&p2=${encodeURIComponent(p2Selected)}&surface=${predictSurf}`);
+    const d = await res.json();
+    showPredictResult(d);
+  } catch(e) {
+    alert('Ошибка сервера. Убедись что бэкенд запущен.');
+  } finally {
+    btn.textContent = 'Рассчитать прогноз'; btn.disabled = false;
+  }
+});
+
+function showPredictResult(d) {
+  const pct1 = Math.round(d.prob_p1 * 100);
+  const pct2 = 100 - pct1;
+  document.getElementById('res-name1').textContent = d.player1.split(' ')[0];
+  document.getElementById('res-name2').textContent = d.player2.split(' ')[0];
+  document.getElementById('res-prob1').textContent = pct1 + '%';
+  document.getElementById('res-prob2').textContent = pct2 + '%';
+  document.getElementById('res-bar').style.width = pct1 + '%';
+  document.getElementById('res-elo1').textContent = Math.round(d.elo1);
+  document.getElementById('res-elo2').textContent = Math.round(d.elo2);
+  document.getElementById('res-form1').textContent = Math.round(d.form1 * 100) + '%';
+
+  const diff = Math.abs(d.prob_p1 - 0.5);
+  let confLabel, confClass;
+  if (diff > 0.2) { confLabel = 'Высокая'; confClass = 'badge-green'; }
+  else if (diff > 0.1) { confLabel = 'Средняя'; confClass = 'badge-amber'; }
+  else { confLabel = 'Низкая'; confClass = 'badge-red'; }
+  document.getElementById('res-conf').innerHTML = `<span class="badge ${confClass}">${confLabel}</span>`;
+
+  const winner = pct1 > pct2 ? d.player1 : d.player2;
+  const prob = Math.max(pct1, pct2);
+  const adviceEl = document.getElementById('bet-advice');
+  if (diff < 0.08) {
+    adviceEl.innerHTML = `<span style="color:var(--muted);font-size:12px">Матч слишком равный (${prob}%). Лучше пропустить — нет явного преимущества.</span>`;
+  } else {
+    adviceEl.innerHTML = `
+      <div style="font-size:12px;line-height:1.7;color:var(--muted)">
+        Модель даёт <strong style="color:var(--text)">${winner}</strong> вероятность <strong style="color:var(--accent)">${prob}%</strong>.<br>
+        Сравни с коэффициентом букмекера: если коэф > <strong style="color:var(--text)">${(100/prob).toFixed(2)}</strong> — есть ценность (value).
+      </div>`;
+  }
+
+  document.getElementById('predict-result').classList.add('show');
+  document.getElementById('predict-result').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ─── H2H Page ───
+let h2hP1 = '', h2hP2 = '';
+setupAutocomplete('h2h-input-p1', 'h2h-drop-p1', n => { h2hP1 = n; checkH2HReady(); });
+setupAutocomplete('h2h-input-p2', 'h2h-drop-p2', n => { h2hP2 = n; checkH2HReady(); });
+document.getElementById('h2h-input-p1').addEventListener('input', () => { h2hP1 = ''; checkH2HReady(); });
+document.getElementById('h2h-input-p2').addEventListener('input', () => { h2hP2 = ''; checkH2HReady(); });
+
+function checkH2HReady() {
+  document.getElementById('btn-h2h').disabled = !(h2hP1 && h2hP2);
+}
+
+document.getElementById('btn-h2h').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-h2h');
+  btn.textContent = 'Загрузка...'; btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/h2h?p1=${encodeURIComponent(h2hP1)}&p2=${encodeURIComponent(h2hP2)}`);
+    const d = await res.json();
+    renderH2H(d);
+  } catch(e) {
+    alert('Ошибка сервера.');
+  } finally {
+    btn.textContent = 'Показать H2H'; btn.disabled = false;
+  }
+});
+
+function renderH2H(d) {
+  const pct1 = d.total > 0 ? Math.round(d.wins1 / d.total * 100) : 50;
+  const container = document.getElementById('h2h-result');
+  const matches = (d.recent || []).slice(-6).reverse();
+  container.innerHTML = `
+    <div class="card">
+      <div class="h2h-score">
+        <div style="text-align:center;flex:1">
+          <div class="h2h-num" style="color:var(--accent)">${d.wins1}</div>
+          <div class="h2h-name">${d.player1.split(' ')[0]}</div>
+        </div>
+        <div style="color:var(--muted);font-size:13px">VS</div>
+        <div style="text-align:center;flex:1">
+          <div class="h2h-num" style="color:var(--green)">${d.wins2}</div>
+          <div class="h2h-name">${d.player2.split(' ')[0]}</div>
+        </div>
+      </div>
+      <div class="prob-track" style="margin-bottom:16px">
+        <div class="prob-fill-p1" style="width:${pct1}%"></div>
+      </div>
+      ${Object.entries(d.by_surface || {}).map(([surf, s]) => {
+        const pct = s.total > 0 ? Math.round(s.wins1/s.total*100) : 50;
+        const surfRu = {Hard:'Хард',Clay:'Грунт',Grass:'Трава'}[surf] || surf;
+        return `
+          <div class="stat-compare-row">
+            <div class="sc-val" style="color:var(--accent)">${s.wins1}</div>
+            <div class="sc-track"><div class="sc-fill" style="width:${pct}%;background:var(--accent)"></div></div>
+            <div class="sc-label">${surfRu}</div>
+            <div class="sc-track"><div class="sc-fill" style="width:${100-pct}%;background:var(--green);float:right"></div></div>
+            <div class="sc-val" style="color:var(--green);text-align:right">${s.wins2}</div>
+          </div>`;
+      }).join('')}
+    </div>
+    <div class="section-label">Последние матчи</div>
+    <div class="card">
+      ${matches.map(m => {
+        const winner = m.winner;
+        const isP1 = winner.includes(d.player1.split(' ')[0]);
+        const badgeCls = isP1 ? 'badge-amber' : 'badge-green';
+        const surfRu = {Hard:'Хард',Clay:'Грунт',Grass:'Трава'}[m.surface] || m.surface;
+        return `
+          <div class="match-row">
+            <div>
+              <div>${m.tourney}</div>
+              <div class="match-info">${m.date} · ${surfRu} · ${m.round}</div>
+            </div>
+            <span class="badge ${badgeCls}">${winner.split(' ')[0]}</span>
+          </div>`;
+      }).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px 0">Матчей не найдено</div>'}
+    </div>`;
+  container.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ─── Toggles ───
+document.querySelectorAll('.toggle').forEach(t => {
+  t.addEventListener('click', () => t.classList.toggle('off'));
+});
+</script>
+</body>
+</html>
