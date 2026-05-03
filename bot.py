@@ -9,8 +9,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppI
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8500214628:AAGInqfRQ9Bsn4cZzTLrysyrXFR9gwvMKNc")
-MINI_APP_URL = os.getenv("MINI_APP_URL", "https://ВАШ_ДОМЕН")  # URL фронтенда
-
+MINI_APP_URL = os.getenv("MINI_APP_URL", "https://frgunit757-tennispro.github.io/tennis-backend/index.html")
 
 async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     keyboard = [[
