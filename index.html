@@ -427,11 +427,25 @@ body {
 </nav>
 
 <script>
-const API = 'https://https://tennis-backend-9zwn.onrender.com';  // ← заменишь на свой URL
+const API = 'https://tennis-backend-9zwn.onrender.com';
 
 // Telegram WebApp init
 const tg = window.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
+
+// Универсальный fetch с правильными заголовками
+async function apiFetch(url) {
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    mode: 'cors',
+  });
+  if (!res.ok) throw new Error('Server error: ' + res.status);
+  return res.json();
+}
 
 // ─── Navigation ───
 document.querySelectorAll('.nav-item').forEach(item => {
@@ -469,8 +483,7 @@ async function loadRatings(surf) {
   const el = document.getElementById('ratings-list');
   el.innerHTML = '<div class="loading">Загрузка...</div>';
   try {
-    const res = await fetch(`${API}/ratings?surface=${surf}`);
-    const data = await res.json();
+    const data = await apiFetch(`${API}/ratings?surface=${surf}`);
     el.innerHTML = data.slice(0, 20).map((p, i) => {
       const [bg, fg] = avatarColors[i % avatarColors.length];
       const initials = p.player.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -498,8 +511,7 @@ loadRatings('hard');
 let allPlayers = [];
 async function loadPlayers() {
   try {
-    const res = await fetch(`${API}/players`);
-    allPlayers = await res.json();
+    allPlayers = await apiFetch(`${API}/players`);
   } catch(e) { allPlayers = []; }
 }
 loadPlayers();
@@ -551,8 +563,7 @@ document.getElementById('btn-predict').addEventListener('click', async () => {
   const btn = document.getElementById('btn-predict');
   btn.textContent = 'Считаю...'; btn.disabled = true;
   try {
-    const res = await fetch(`${API}/predict?p1=${encodeURIComponent(p1Selected)}&p2=${encodeURIComponent(p2Selected)}&surface=${predictSurf}`);
-    const d = await res.json();
+    const d = await apiFetch(`${API}/predict?p1=${encodeURIComponent(p1Selected)}&p2=${encodeURIComponent(p2Selected)}&surface=${predictSurf}`);
     showPredictResult(d);
   } catch(e) {
     alert('Ошибка сервера. Убедись что бэкенд запущен.');
@@ -612,8 +623,7 @@ document.getElementById('btn-h2h').addEventListener('click', async () => {
   const btn = document.getElementById('btn-h2h');
   btn.textContent = 'Загрузка...'; btn.disabled = true;
   try {
-    const res = await fetch(`${API}/h2h?p1=${encodeURIComponent(h2hP1)}&p2=${encodeURIComponent(h2hP2)}`);
-    const d = await res.json();
+    const d = await apiFetch(`${API}/h2h?p1=${encodeURIComponent(h2hP1)}&p2=${encodeURIComponent(h2hP2)}`);
     renderH2H(d);
   } catch(e) {
     alert('Ошибка сервера.');
