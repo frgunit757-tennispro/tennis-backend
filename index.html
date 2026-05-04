@@ -370,6 +370,15 @@ body {
   <div id="h2h-result"></div>
 </div>
 
+<!-- PAGE: MATCHES -->
+<div class="page" id="page-matches">
+  <div class="page-header">
+    <div class="page-header-icon">📅</div>
+    <div><h1>Матчи сегодня</h1><p>Коэффициенты + наш прогноз</p></div>
+  </div>
+  <div id="matches-list"><div class="loading">Загрузка...</div></div>
+</div>
+
 <!-- PAGE: SETTINGS -->
 <div class="page" id="page-settings">
   <div class="page-header">
@@ -420,6 +429,9 @@ body {
   </div>
   <div class="nav-item" data-page="h2h">
     <span class="nav-icon">⚔️</span><span>H2H</span>
+  </div>
+  <div class="nav-item" data-page="matches">
+    <span class="nav-icon">📅</span><span>Матчи</span>
   </div>
   <div class="nav-item" data-page="settings">
     <span class="nav-icon">⚙️</span><span>Настройки</span>
@@ -684,6 +696,59 @@ function renderH2H(d) {
     </div>`;
   container.scrollIntoView({ behavior: 'smooth' });
 }
+
+// ─── Matches Page ───
+async function loadMatches() {
+  const el = document.getElementById('matches-list');
+  el.innerHTML = '<div class="loading">Загрузка матчей...</div>';
+  try {
+    const data = await apiFetch(`${API}/upcoming`);
+    if (!data.length) {
+      el.innerHTML = '<div class="loading">Матчей не найдено</div>';
+      return;
+    }
+    el.innerHTML = data.map(m => {
+      const prob = m.our_prob ? Math.round(m.our_prob * 100) : null;
+      const bkProbHome = m.odds_home ? Math.round(100 / m.odds_home) : null;
+      const valueClass = m.value_bet && m.value_bet.includes('✅') ? 'badge-green' :
+                         m.value_bet && m.value_bet.includes('⚪') ? 'badge-amber' : 'badge-red';
+      return `
+        <div class="card" style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:13px;font-weight:600">${m.home} <span style="color:var(--muted)">vs</span> ${m.away}</div>
+            <div style="font-size:10px;color:var(--muted)">${m.time} UTC</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+            <div style="background:var(--border);border-radius:8px;padding:6px 10px;flex:1;text-align:center">
+              <div style="font-size:9px;color:var(--muted);margin-bottom:2px">${m.home.split(' ')[0]}</div>
+              <div style="font-size:16px;font-weight:700;color:var(--accent)">${m.odds_home || '—'}</div>
+            </div>
+            <div style="background:var(--border);border-radius:8px;padding:6px 10px;flex:1;text-align:center">
+              <div style="font-size:9px;color:var(--muted);margin-bottom:2px">${m.away.split(' ')[0]}</div>
+              <div style="font-size:16px;font-weight:700;color:var(--green)">${m.odds_away || '—'}</div>
+            </div>
+            ${prob ? `
+            <div style="background:var(--border);border-radius:8px;padding:6px 10px;flex:1;text-align:center">
+              <div style="font-size:9px;color:var(--muted);margin-bottom:2px">Наш прогноз</div>
+              <div style="font-size:16px;font-weight:700;color:var(--amber)">${prob}%</div>
+            </div>` : ''}
+          </div>
+          ${m.value_bet ? `<span class="badge ${valueClass}" style="font-size:11px">${m.value_bet}</span>` : ''}
+          <div style="font-size:10px;color:var(--muted);margin-top:6px">${m.bookmaker}</div>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="loading">Ошибка загрузки матчей</div>';
+  }
+}
+
+// Загружаем матчи при открытии вкладки
+document.querySelectorAll('.nav-item').forEach(item => {
+  if (item.dataset.page === 'matches') {
+    item.addEventListener('click', loadMatches);
+  }
+});
+loadMatches();
 
 // ─── Toggles ───
 document.querySelectorAll('.toggle').forEach(t => {
