@@ -1,5 +1,8 @@
 """
-Бэкенд для Telegram Mini App
+Бэкенд Tennis Analyzer
+- Исход матча
+- Тотал геймов (over/under)
+- Победа в сете (spreads)
 """
 
 from fastapi import FastAPI, HTTPException
@@ -11,11 +14,16 @@ import requests
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-# ─── Константы ───
 DATA         = Path(".")
 ODDS_API_KEY = "7f2d9a6e51688c0e68bce9abca2876ba"
 
-# ─── Глобальные данные ───
+# Все активные теннисные турниры
+TENNIS_SPORTS = [
+    "tennis",
+    "tennis_atp_italian_open",
+    "tennis_wta_italian_open",
+]
+
 ratings_df:   pd.DataFrame = None
 atp_df:       pd.DataFrame = None
 model_bundle: dict         = None
@@ -53,12 +61,17 @@ app.add_middleware(
 def find_player(name: str):
     if ratings_df is None:
         return None
+    # Поиск по полному имени
     exact = ratings_df[ratings_df["player"] == name]
     if not exact.empty:
         return exact.iloc[0]
-    partial = ratings_df[ratings_df["player"].str.contains(name, case=False, na=False)]
-    if not partial.empty:
-        return partial.iloc[0]
+    # Поиск по фамилии
+    parts = name.split()
+    for part in parts:
+        if len(part) > 3:
+            partial = ratings_df[ratings_df["player"].str.contains(part, case=False, na=False)]
+            if not partial.empty:
+                return partial.iloc[0]
     return None
 
 
@@ -66,6 +79,83 @@ def get_elo(row, surface: str) -> float:
     col_map = {"hard": "elo_hard", "clay": "elo_clay", "grass": "elo_grass"}
     col = col_map.get(surface, "elo_hard")
     return float(row[col]) if col in row.index else float(row["elo_hard"])
+
+
+def predict_winner(r1, r2, surface: str) -> float:
+    """Возвращает вероятность победы первого игрока"""
+    if model_bundle is None:
+        return None
+    elo1 = get_elo(r1, surface)
+    elo2 = get_elo(r2, surface)
+    elo_prob = 1 / (1 + 10 ** (-(elo1 - elo2) / 400))
+    clf, scaler, features = model_bundle["clf"], model_bundle["scaler"], model_bundle["features"]
+    X = pd.DataFrame([{
+        "elo_diff":  elo1 - elo2,
+        "form_diff": float(r1["form"]) - float(r2["form"]),
+        "elo_prob":  elo_prob,
+        "rank_diff": 0,
+        "is_clay":   int(surface == "clay"),
+        "is_grass":  int(surface == "grass"),
+        "round_num": 4,
+    }])[features]
+    return float(clf.predict_proba(scaler.transform(X))[0][1])
+
+
+def get_player_total_stats(player_name: str) -> dict:
+    """Средний тотал геймов и статистика сетов для игрока"""
+    if atp_df is None:
+        return {}
+    mask = (
+        atp_df["winner_name"].str.contains(player_name, case=False, na=False) |
+        atp_df["loser_name"].str.contains(player_name, case=False, na=False)
+    )
+    player_matches = atp_df[mask].dropna(subset=["score"]).tail(50)
+
+    total_games = []
+    three_set_matches = 0
+
+    for _, row in player_matches.iterrows():
+        score = str(row.get("score", ""))
+        sets = score.split()
+        games = 0
+        set_count = 0
+        for s in sets:
+            try:
+                parts = s.split("-")
+                if len(parts) == 2:
+                    g1 = int(parts[0].split("(")[0])
+                    g2 = int(parts[1].split("(")[0])
+                    games += g1 + g2
+                    set_count += 1
+            except:
+                pass
+        if games > 0:
+            total_games.append(games)
+        if set_count >= 3:
+            three_set_matches += 1
+
+    if not total_games:
+        return {}
+
+    return {
+        "avg_total": round(np.mean(total_games), 1),
+        "three_set_pct": round(three_set_matches / len(player_matches) * 100, 1),
+        "matches_analyzed": len(total_games),
+    }
+
+
+def analyze_value(our_prob: float, bk_odds: float) -> dict:
+    """Анализируем есть ли value в ставке"""
+    if not our_prob or not bk_odds:
+        return {"has_value": False, "diff": 0}
+    bk_prob = 1 / bk_odds
+    diff = our_prob - bk_prob
+    return {
+        "has_value": diff > 0.05,
+        "diff": round(diff * 100, 1),
+        "our_prob_pct": round(our_prob * 100, 1),
+        "bk_prob_pct": round(bk_prob * 100, 1),
+    }
 
 
 # ─── ЭНДПОИНТЫ ───
@@ -110,31 +200,31 @@ def predict_match(p1: str, p2: str, surface: str = "hard"):
 
     elo1 = get_elo(r1, surface)
     elo2 = get_elo(r2, surface)
-    elo_prob = 1 / (1 + 10 ** (-(elo1 - elo2) / 400))
+    prob1 = predict_winner(r1, r2, surface)
 
-    clf, scaler, features = model_bundle["clf"], model_bundle["scaler"], model_bundle["features"]
-    X = pd.DataFrame([{
-        "elo_diff":  elo1 - elo2,
-        "form_diff": float(r1["form"]) - float(r2["form"]),
-        "elo_prob":  elo_prob,
-        "rank_diff": 0,
-        "is_clay":   int(surface == "clay"),
-        "is_grass":  int(surface == "grass"),
-        "round_num": 5,
-    }])[features]
+    # Статистика тотала
+    stats1 = get_player_total_stats(r1["player"])
+    stats2 = get_player_total_stats(r2["player"])
+    avg_total = None
+    if stats1.get("avg_total") and stats2.get("avg_total"):
+        avg_total = round((stats1["avg_total"] + stats2["avg_total"]) / 2, 1)
 
-    prob1 = float(clf.predict_proba(scaler.transform(X))[0][1])
+    three_set_pct = None
+    if stats1.get("three_set_pct") and stats2.get("three_set_pct"):
+        three_set_pct = round((stats1["three_set_pct"] + stats2["three_set_pct"]) / 2, 1)
 
     return {
-        "player1": r1["player"],
-        "player2": r2["player"],
-        "surface": surface,
-        "prob_p1": round(prob1, 4),
-        "prob_p2": round(1 - prob1, 4),
-        "elo1":    round(elo1, 0),
-        "elo2":    round(elo2, 0),
-        "form1":   round(float(r1["form"]), 3),
-        "form2":   round(float(r2["form"]), 3),
+        "player1":       r1["player"],
+        "player2":       r2["player"],
+        "surface":       surface,
+        "prob_p1":       round(prob1, 4) if prob1 else None,
+        "prob_p2":       round(1 - prob1, 4) if prob1 else None,
+        "elo1":          round(elo1, 0),
+        "elo2":          round(elo2, 0),
+        "form1":         round(float(r1["form"]), 3),
+        "form2":         round(float(r2["form"]), 3),
+        "avg_total":     avg_total,
+        "three_set_pct": three_set_pct,
     }
 
 
@@ -187,85 +277,142 @@ def head_to_head(p1: str, p2: str):
 
 @app.get("/upcoming")
 def get_upcoming():
-    """Предстоящие матчи с коэффициентами + наш прогноз"""
-    try:
-        url = (
-            f"https://api.the-odds-api.com/v4/sports/tennis/odds/"
-            f"?apiKey={ODDS_API_KEY}&regions=eu&markets=h2h"
-        )
-        r = requests.get(url, timeout=10)
-        if r.status_code != 200:
-            return []
+    """Предстоящие матчи с тремя критериями анализа"""
+    all_matches = []
 
-        matches = []
-        for m in r.json():
-            if not m.get("bookmakers"):
+    for sport in TENNIS_SPORTS:
+        try:
+            url = (
+                f"https://api.the-odds-api.com/v4/sports/{sport}/odds/"
+                f"?apiKey={ODDS_API_KEY}&regions=eu&markets=h2h,totals,spreads"
+            )
+            r = requests.get(url, timeout=10)
+            if r.status_code != 200:
+                continue
+            data = r.json()
+            if not isinstance(data, list):
                 continue
 
-            home = m["home_team"]
-            away = m["away_team"]
+            for m in data:
+                if not m.get("bookmakers"):
+                    continue
 
-            # Коэффициенты
-            bk       = m["bookmakers"][0]
-            outcomes = bk["markets"][0]["outcomes"]
-            odds     = {o["name"]: o["price"] for o in outcomes}
+                home = m["home_team"]
+                away = m["away_team"]
 
-            # Наш прогноз
-            our_prob  = None
-            value_bet = None
-            if ratings_df is not None and model_bundle is not None:
-                r1 = find_player(home.split()[-1])
-                r2 = find_player(away.split()[-1])
-                if r1 is not None and r2 is not None:
-                    elo1     = get_elo(r1, "hard")
-                    elo2     = get_elo(r2, "hard")
-                    elo_prob = 1 / (1 + 10 ** (-(elo1 - elo2) / 400))
+                # Собираем все рынки
+                h2h_odds    = {}
+                total_line  = None
+                total_over  = None
+                total_under = None
+                spread_home = None
+                spread_away = None
+                bookmaker   = ""
 
-                    clf, scaler, features = (
-                        model_bundle["clf"],
-                        model_bundle["scaler"],
-                        model_bundle["features"],
-                    )
-                    X = pd.DataFrame([{
-                        "elo_diff":  elo1 - elo2,
-                        "form_diff": float(r1["form"]) - float(r2["form"]),
-                        "elo_prob":  elo_prob,
-                        "rank_diff": 0,
-                        "is_clay":   0,
-                        "is_grass":  0,
-                        "round_num": 4,
-                    }])[features]
+                for bk in m["bookmakers"]:
+                    bookmaker = bk["title"]
+                    for market in bk["markets"]:
+                        if market["key"] == "h2h":
+                            for o in market["outcomes"]:
+                                h2h_odds[o["name"]] = o["price"]
+                        elif market["key"] == "totals" and not total_line:
+                            for o in market["outcomes"]:
+                                total_line = o.get("point")
+                                if o["name"] == "Over":
+                                    total_over = o["price"]
+                                elif o["name"] == "Under":
+                                    total_under = o["price"]
+                        elif market["key"] == "spreads" and not spread_home:
+                            for o in market["outcomes"]:
+                                if o["name"] == home:
+                                    spread_home = {"point": o.get("point"), "price": o["price"]}
+                                else:
+                                    spread_away = {"point": o.get("point"), "price": o["price"]}
+                    break  # берём только первого букмекера
 
-                    our_prob = round(float(clf.predict_proba(scaler.transform(X))[0][1]), 4)
+                # Наш прогноз
+                our_prob    = None
+                avg_total   = None
+                three_set_p = None
+                value_h2h   = None
+                value_total = None
+                value_set   = None
 
-                    # Проверяем value — наша вероятность vs вероятность букмекера
-                    bk_prob_home = round(1 / odds.get(home, 99), 4) if home in odds else None
-                    if our_prob and bk_prob_home:
-                        diff = our_prob - bk_prob_home
-                        if diff > 0.05:
-                            value_bet = f"✅ VALUE на {home} (+{diff:.0%})"
-                        elif (1 - our_prob) - (1 - bk_prob_home) > 0.05:
-                            value_bet = f"✅ VALUE на {away}"
-                        else:
-                            value_bet = "⚪ Нет value"
+                if ratings_df is not None and model_bundle is not None:
+                    r1 = find_player(home.split()[-1])
+                    r2 = find_player(away.split()[-1])
 
-            matches.append({
-                "home":       home,
-                "away":       away,
-                "date":       m["commence_time"][:10],
-                "time":       m["commence_time"][11:16],
-                "odds_home":  odds.get(home),
-                "odds_away":  odds.get(away),
-                "bookmaker":  bk["title"],
-                "our_prob":   our_prob,
-                "value_bet":  value_bet,
-            })
+                    if r1 is not None and r2 is not None:
+                        our_prob = predict_winner(r1, r2, "clay")
 
-        return matches
+                        # Тотал из наших данных
+                        stats1 = get_player_total_stats(r1["player"])
+                        stats2 = get_player_total_stats(r2["player"])
+                        if stats1.get("avg_total") and stats2.get("avg_total"):
+                            avg_total = round((stats1["avg_total"] + stats2["avg_total"]) / 2, 1)
+                        if stats1.get("three_set_pct") and stats2.get("three_set_pct"):
+                            three_set_p = round((stats1["three_set_pct"] + stats2["three_set_pct"]) / 2, 1)
 
-    except Exception as e:
-        print(f"Ошибка /upcoming: {e}")
-        return []
+                        # VALUE анализ
+                        if our_prob and h2h_odds.get(home):
+                            v = analyze_value(our_prob, h2h_odds[home])
+                            if v["has_value"]:
+                                value_h2h = f"✅ {home.split()[-1]} (+{v['diff']}%)"
+                            elif analyze_value(1 - our_prob, h2h_odds.get(away, 99))["has_value"]:
+                                v2 = analyze_value(1 - our_prob, h2h_odds.get(away, 99))
+                                value_h2h = f"✅ {away.split()[-1]} (+{v2['diff']}%)"
+                            else:
+                                value_h2h = "⚪ Нет value"
+
+                        # Тотал value
+                        if avg_total and total_line:
+                            our_over = 1 if avg_total > float(total_line) else 0
+                            if our_over and total_over:
+                                value_total = f"📊 Тотал БОЛЬШЕ {total_line} (наш avg: {avg_total})"
+                            elif not our_over and total_under:
+                                value_total = f"📊 Тотал МЕНЬШЕ {total_line} (наш avg: {avg_total})"
+
+                        # Победа в сете
+                        if three_set_p is not None:
+                            if three_set_p > 50:
+                                value_set = f"🎾 Скорее всего 3 сета ({three_set_p}%)"
+                            else:
+                                value_set = f"🎾 Скорее всего 2 сета ({100-three_set_p:.0f}%)"
+
+                match_data = {
+                    "home":         home,
+                    "away":         away,
+                    "date":         m["commence_time"][:10],
+                    "time":         m["commence_time"][11:16],
+                    "bookmaker":    bookmaker,
+                    "tournament":   sport.replace("tennis_", "").replace("_", " ").title(),
+
+                    # Коэффициенты букмекера
+                    "odds_home":    h2h_odds.get(home),
+                    "odds_away":    h2h_odds.get(away),
+                    "total_line":   total_line,
+                    "total_over":   total_over,
+                    "total_under":  total_under,
+                    "spread_home":  spread_home,
+                    "spread_away":  spread_away,
+
+                    # Наш анализ
+                    "our_prob":     round(our_prob, 4) if our_prob else None,
+                    "avg_total":    avg_total,
+                    "three_set_pct": three_set_p,
+
+                    # Итоговые рекомендации
+                    "value_h2h":    value_h2h,
+                    "value_total":  value_total,
+                    "value_set":    value_set,
+                }
+                all_matches.append(match_data)
+
+        except Exception as e:
+            print(f"Ошибка для {sport}: {e}")
+            continue
+
+    return all_matches
 
 
 @app.get("/health")
