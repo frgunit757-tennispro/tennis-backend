@@ -3,6 +3,7 @@
 - Исход матча
 - Тотал геймов (over/under)
 - Победа в сете (spreads)
++ Telegram бот запускается в фоновом потоке
 """
 
 from fastapi import FastAPI, HTTPException
@@ -11,11 +12,21 @@ import pandas as pd
 import numpy as np
 import pickle
 import requests
+import os
+import asyncio
+import threading
 from pathlib import Path
 from contextlib import asynccontextmanager
 
+# Telegram
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from telegram.ext import Application, CommandHandler, ContextTypes
+
 DATA         = Path(".")
 ODDS_API_KEY = "7f2d9a6e51688c0e68bce9abca2876ba"
+
+BOT_TOKEN    = os.getenv("TELEGRAM_BOT_TOKEN", "8500214628:AAGInqfRQ9Bsn4cZzTLrysyrXFR9gwvMKNc")
+MINI_APP_URL = os.getenv("MINI_APP_URL", "https://frgunit757-tennispro.github.io/tennis-backend/index.html")
 
 # Все активные теннисные турниры
 TENNIS_SPORTS = [
@@ -41,9 +52,67 @@ def load_data():
         print(f"Ошибка загрузки данных: {e}")
 
 
+# ─── Telegram Bot ───
+
+async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    keyboard = [[
+        InlineKeyboardButton(
+            "🎾 Открыть Tennis Analyzer",
+            web_app=WebAppInfo(url=MINI_APP_URL)
+        )
+    ]]
+    await update.message.reply_text(
+        "👋 Привет!\n\n"
+        "🎾 *Tennis Analyzer* — анализ матчей ATP\n\n"
+        "• Elo-рейтинги по покрытиям\n"
+        "• Прогнозы с вероятностями\n"
+        "• H2H история игроков\n\n"
+        "Нажми кнопку чтобы открыть приложение:",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+async def cmd_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "❓ *Как пользоваться:*\n\n"
+        "1. Нажми /start → кнопка 'Открыть'\n"
+        "2. Вкладка *Рейтинг* — топ игроков по Elo\n"
+        "3. Вкладка *Прогноз* — введи двух игроков и покрытие\n"
+        "4. Вкладка *H2H* — история встреч\n\n"
+        "⚠️ Прогнозы статистические, не финансовый совет.",
+        parse_mode="Markdown"
+    )
+
+
+def run_bot():
+    """Запускает Telegram бота в отдельном event loop (фоновый поток)"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    async def start_polling():
+        app = Application.builder().token(BOT_TOKEN).build()
+        app.add_handler(CommandHandler("start", cmd_start))
+        app.add_handler(CommandHandler("help",  cmd_help))
+        print("✓ Telegram бот запущен (polling)")
+        await app.initialize()
+        await app.start()
+        await app.updater.start_polling()
+        # Держим поток живым
+        while True:
+            await asyncio.sleep(3600)
+
+    loop.run_until_complete(start_polling())
+
+
+# ─── FastAPI lifespan ───
+
 @asynccontextmanager
 async def lifespan(app):
     load_data()
+    # Запускаем бота в фоновом потоке
+    bot_thread = threading.Thread(target=run_bot, daemon=True)
+    bot_thread.start()
     yield
 
 
@@ -58,14 +127,13 @@ app.add_middleware(
 
 
 # ─── Хелперы ───
+
 def find_player(name: str):
     if ratings_df is None:
         return None
-    # Поиск по полному имени
     exact = ratings_df[ratings_df["player"] == name]
     if not exact.empty:
         return exact.iloc[0]
-    # Поиск по фамилии
     parts = name.split()
     for part in parts:
         if len(part) > 3:
@@ -82,7 +150,6 @@ def get_elo(row, surface: str) -> float:
 
 
 def predict_winner(r1, r2, surface: str) -> float:
-    """Возвращает вероятность победы первого игрока"""
     if model_bundle is None:
         return None
     elo1 = get_elo(r1, surface)
@@ -102,7 +169,6 @@ def predict_winner(r1, r2, surface: str) -> float:
 
 
 def get_player_total_stats(player_name: str) -> dict:
-    """Средний тотал геймов и статистика сетов для игрока"""
     if atp_df is None:
         return {}
     mask = (
@@ -145,7 +211,6 @@ def get_player_total_stats(player_name: str) -> dict:
 
 
 def analyze_value(our_prob: float, bk_odds: float) -> dict:
-    """Анализируем есть ли value в ставке"""
     if not our_prob or not bk_odds:
         return {"has_value": False, "diff": 0}
     bk_prob = 1 / bk_odds
@@ -159,6 +224,11 @@ def analyze_value(our_prob: float, bk_odds: float) -> dict:
 
 
 # ─── ЭНДПОИНТЫ ───
+
+@app.get("/")
+def root():
+    return {"status": "ok", "service": "Tennis Analyzer API"}
+
 
 @app.get("/players")
 def get_players():
@@ -202,7 +272,6 @@ def predict_match(p1: str, p2: str, surface: str = "hard"):
     elo2 = get_elo(r2, surface)
     prob1 = predict_winner(r1, r2, surface)
 
-    # Статистика тотала
     stats1 = get_player_total_stats(r1["player"])
     stats2 = get_player_total_stats(r2["player"])
     avg_total = None
@@ -277,7 +346,6 @@ def head_to_head(p1: str, p2: str):
 
 @app.get("/upcoming")
 def get_upcoming():
-    """Предстоящие матчи с тремя критериями анализа"""
     all_matches = []
 
     for sport in TENNIS_SPORTS:
@@ -300,7 +368,6 @@ def get_upcoming():
                 home = m["home_team"]
                 away = m["away_team"]
 
-                # Собираем все рынки
                 h2h_odds    = {}
                 total_line  = None
                 total_over  = None
@@ -328,9 +395,8 @@ def get_upcoming():
                                     spread_home = {"point": o.get("point"), "price": o["price"]}
                                 else:
                                     spread_away = {"point": o.get("point"), "price": o["price"]}
-                    break  # берём только первого букмекера
+                    break
 
-                # Наш прогноз
                 our_prob    = None
                 avg_total   = None
                 three_set_p = None
@@ -345,7 +411,6 @@ def get_upcoming():
                     if r1 is not None and r2 is not None:
                         our_prob = predict_winner(r1, r2, "clay")
 
-                        # Тотал из наших данных
                         stats1 = get_player_total_stats(r1["player"])
                         stats2 = get_player_total_stats(r2["player"])
                         if stats1.get("avg_total") and stats2.get("avg_total"):
@@ -353,7 +418,6 @@ def get_upcoming():
                         if stats1.get("three_set_pct") and stats2.get("three_set_pct"):
                             three_set_p = round((stats1["three_set_pct"] + stats2["three_set_pct"]) / 2, 1)
 
-                        # VALUE анализ
                         if our_prob and h2h_odds.get(home):
                             v = analyze_value(our_prob, h2h_odds[home])
                             if v["has_value"]:
@@ -364,7 +428,6 @@ def get_upcoming():
                             else:
                                 value_h2h = "⚪ Нет value"
 
-                        # Тотал value
                         if avg_total and total_line:
                             our_over = 1 if avg_total > float(total_line) else 0
                             if our_over and total_over:
@@ -372,7 +435,6 @@ def get_upcoming():
                             elif not our_over and total_under:
                                 value_total = f"📊 Тотал МЕНЬШЕ {total_line} (наш avg: {avg_total})"
 
-                        # Победа в сете
                         if three_set_p is not None:
                             if three_set_p > 50:
                                 value_set = f"🎾 Скорее всего 3 сета ({three_set_p}%)"
@@ -386,8 +448,6 @@ def get_upcoming():
                     "time":         m["commence_time"][11:16],
                     "bookmaker":    bookmaker,
                     "tournament":   sport.replace("tennis_", "").replace("_", " ").title(),
-
-                    # Коэффициенты букмекера
                     "odds_home":    h2h_odds.get(home),
                     "odds_away":    h2h_odds.get(away),
                     "total_line":   total_line,
@@ -395,13 +455,9 @@ def get_upcoming():
                     "total_under":  total_under,
                     "spread_home":  spread_home,
                     "spread_away":  spread_away,
-
-                    # Наш анализ
                     "our_prob":     round(our_prob, 4) if our_prob else None,
                     "avg_total":    avg_total,
                     "three_set_pct": three_set_p,
-
-                    # Итоговые рекомендации
                     "value_h2h":    value_h2h,
                     "value_total":  value_total,
                     "value_set":    value_set,
@@ -426,4 +482,4 @@ def health():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
