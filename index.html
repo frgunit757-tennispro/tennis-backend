@@ -709,32 +709,80 @@ async function loadMatches() {
     }
     el.innerHTML = data.map(m => {
       const prob = m.our_prob ? Math.round(m.our_prob * 100) : null;
-      const bkProbHome = m.odds_home ? Math.round(100 / m.odds_home) : null;
-      const valueClass = m.value_bet && m.value_bet.includes('✅') ? 'badge-green' :
-                         m.value_bet && m.value_bet.includes('⚪') ? 'badge-amber' : 'badge-red';
+      const prob2 = prob ? 100 - prob : null;
+      const homeName = m.home.split(' ').pop();
+      const awayName = m.away.split(' ').pop();
+
+      // Критерий 1: Исход
+      const valueClass = m.value_h2h && m.value_h2h.includes('✅') ? 'badge-green' : 'badge-amber';
+
+      // Критерий 2: Тотал
+      const totalClass = m.value_total ? 'badge-green' : 'badge-amber';
+
+      // Критерий 3: Сеты
+      const setClass = m.value_set && m.value_set.includes('3 сета') ? 'badge-amber' : 'badge-green';
+
       return `
-        <div class="card" style="margin-bottom:10px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <div style="font-size:13px;font-weight:600">${m.home} <span style="color:var(--muted)">vs</span> ${m.away}</div>
-            <div style="font-size:10px;color:var(--muted)">${m.time} UTC</div>
+        <div class="card" style="margin-bottom:12px">
+
+          <!-- Шапка матча -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text)">${homeName} vs ${awayName}</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">${m.tournament} · ${m.date} ${m.time} UTC</div>
+            </div>
+            <div style="font-size:10px;color:var(--muted)">${m.bookmaker}</div>
           </div>
-          <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-            <div style="background:var(--border);border-radius:8px;padding:6px 10px;flex:1;text-align:center">
-              <div style="font-size:9px;color:var(--muted);margin-bottom:2px">${m.home.split(' ')[0]}</div>
-              <div style="font-size:16px;font-weight:700;color:var(--accent)">${m.odds_home || '—'}</div>
+
+          <!-- Коэффициенты букмекера -->
+          <div style="display:flex;gap:6px;margin-bottom:10px">
+            <div style="background:var(--border);border-radius:10px;padding:8px;flex:1;text-align:center">
+              <div style="font-size:9px;color:var(--muted);margin-bottom:3px">${homeName}</div>
+              <div style="font-size:18px;font-weight:700;color:var(--accent)">${m.odds_home || '—'}</div>
+              ${prob ? `<div style="font-size:9px;color:var(--muted);margin-top:2px">наш: ${prob}%</div>` : ''}
             </div>
-            <div style="background:var(--border);border-radius:8px;padding:6px 10px;flex:1;text-align:center">
-              <div style="font-size:9px;color:var(--muted);margin-bottom:2px">${m.away.split(' ')[0]}</div>
-              <div style="font-size:16px;font-weight:700;color:var(--green)">${m.odds_away || '—'}</div>
+            <div style="background:var(--border);border-radius:10px;padding:8px;flex:1;text-align:center">
+              <div style="font-size:9px;color:var(--muted);margin-bottom:3px">${awayName}</div>
+              <div style="font-size:18px;font-weight:700;color:var(--green)">${m.odds_away || '—'}</div>
+              ${prob2 ? `<div style="font-size:9px;color:var(--muted);margin-top:2px">наш: ${prob2}%</div>` : ''}
             </div>
-            ${prob ? `
-            <div style="background:var(--border);border-radius:8px;padding:6px 10px;flex:1;text-align:center">
-              <div style="font-size:9px;color:var(--muted);margin-bottom:2px">Наш прогноз</div>
-              <div style="font-size:16px;font-weight:700;color:var(--amber)">${prob}%</div>
+            ${m.total_line ? `
+            <div style="background:var(--border);border-radius:10px;padding:8px;flex:1;text-align:center">
+              <div style="font-size:9px;color:var(--muted);margin-bottom:3px">Тотал ${m.total_line}</div>
+              <div style="font-size:12px;font-weight:600;color:var(--amber)">О: ${m.total_over || '—'}</div>
+              <div style="font-size:12px;font-weight:600;color:var(--amber)">У: ${m.total_under || '—'}</div>
             </div>` : ''}
           </div>
-          ${m.value_bet ? `<span class="badge ${valueClass}" style="font-size:11px">${m.value_bet}</span>` : ''}
-          <div style="font-size:10px;color:var(--muted);margin-top:6px">${m.bookmaker}</div>
+
+          <!-- Три критерия -->
+          <div style="border-top:0.5px solid var(--border);padding-top:8px">
+            <div style="font-size:9px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Наш анализ</div>
+
+            <!-- 1. Исход -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <span style="font-size:11px;color:var(--muted);width:20px">1️⃣</span>
+              <span style="font-size:11px;color:var(--text);flex:1">Исход матча</span>
+              ${m.value_h2h ? `<span class="badge ${valueClass}" style="font-size:10px">${m.value_h2h}</span>` : '<span style="font-size:10px;color:var(--muted)">нет данных</span>'}
+            </div>
+
+            <!-- 2. Тотал -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <span style="font-size:11px;color:var(--muted);width:20px">2️⃣</span>
+              <span style="font-size:11px;color:var(--text);flex:1">Тотал геймов</span>
+              ${m.value_total ? `<span class="badge ${totalClass}" style="font-size:10px">${m.value_total}</span>` :
+                m.avg_total ? `<span style="font-size:10px;color:var(--muted)">avg: ${m.avg_total} геймов</span>` :
+                '<span style="font-size:10px;color:var(--muted)">нет данных</span>'}
+            </div>
+
+            <!-- 3. Сеты -->
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:11px;color:var(--muted);width:20px">3️⃣</span>
+              <span style="font-size:11px;color:var(--text);flex:1">Победа в сете</span>
+              ${m.value_set ? `<span class="badge ${setClass}" style="font-size:10px">${m.value_set}</span>` :
+                '<span style="font-size:10px;color:var(--muted)">нет данных</span>'}
+            </div>
+          </div>
+
         </div>`;
     }).join('');
   } catch(e) {
