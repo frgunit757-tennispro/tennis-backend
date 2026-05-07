@@ -31,7 +31,6 @@ body {
   padding-bottom: 70px;
 }
 
-/* NAV */
 .nav {
   position: fixed; bottom: 0; left: 0; right: 0;
   background: var(--header);
@@ -50,11 +49,9 @@ body {
 .nav-item.active { color: var(--accent); }
 .nav-icon { font-size: 20px; }
 
-/* PAGES */
 .page { display: none; padding: 0 0 12px; }
 .page.active { display: block; }
 
-/* HEADER */
 .page-header {
   background: var(--header);
   padding: 14px 16px 12px;
@@ -71,7 +68,6 @@ body {
 .page-header h1 { font-size: 16px; font-weight: 600; }
 .page-header p { font-size: 11px; color: var(--muted); }
 
-/* SURF PILLS */
 .surf-row {
   display: flex; gap: 8px;
   padding: 10px 14px 6px;
@@ -87,7 +83,6 @@ body {
 }
 .surf-pill.active { background: var(--border); color: var(--accent); }
 
-/* CARDS */
 .card {
   background: var(--card);
   border-radius: var(--radius);
@@ -95,7 +90,6 @@ body {
   padding: 12px 14px;
 }
 
-/* PLAYER ROW */
 .player-row {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 0;
@@ -110,12 +104,8 @@ body {
 }
 .pname { font-size: 13px; font-weight: 500; }
 .pmeta { font-size: 10px; color: var(--muted); }
-.elo-badge {
-  margin-left: auto;
-  font-size: 13px; font-weight: 700; color: var(--accent);
-}
+.elo-badge { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--accent); }
 
-/* SECTION LABEL */
 .section-label {
   font-size: 10px; font-weight: 600;
   letter-spacing: .06em; text-transform: uppercase;
@@ -123,7 +113,6 @@ body {
   padding: 10px 14px 4px;
 }
 
-/* INPUTS */
 .input-wrap { margin: 0 12px 8px; position: relative; }
 .search-input {
   width: 100%;
@@ -137,7 +126,6 @@ body {
 .search-input:focus { border-color: var(--accent); }
 .search-input::placeholder { color: var(--muted); }
 
-/* DROPDOWN */
 .dropdown {
   background: var(--header);
   border: 0.5px solid var(--border);
@@ -156,7 +144,6 @@ body {
 .dropdown-item:last-child { border: none; }
 .dropdown-item:hover { background: var(--border); }
 
-/* BIG BUTTON */
 .btn-primary {
   display: block; width: calc(100% - 24px);
   margin: 8px 12px;
@@ -169,7 +156,6 @@ body {
 .btn-primary:active { opacity: .8; }
 .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
 
-/* PREDICT RESULT */
 .predict-result { display: none; }
 .predict-result.show { display: block; }
 
@@ -189,10 +175,7 @@ body {
 }
 .prob-fill-p1 { height: 100%; border-radius: 4px; background: var(--accent); transition: width .6s ease; }
 
-.stats-row {
-  display: flex; justify-content: space-between;
-  margin-top: 6px;
-}
+.stats-row { display: flex; justify-content: space-between; margin-top: 6px; }
 .stat-item { text-align: center; flex: 1; }
 .stat-label { font-size: 9px; color: var(--muted); margin-bottom: 3px; }
 .stat-val { font-size: 12px; font-weight: 600; }
@@ -206,18 +189,11 @@ body {
 .badge-amber { background: #3a2a10; color: var(--amber); }
 .badge-red   { background: #3a1010; color: var(--red); }
 
-/* H2H */
-.h2h-score {
-  display: flex; justify-content: space-between;
-  align-items: center; padding: 10px 0 14px;
-}
+.h2h-score { display: flex; justify-content: space-between; align-items: center; padding: 10px 0 14px; }
 .h2h-num { font-size: 36px; font-weight: 700; }
 .h2h-name { font-size: 10px; color: var(--muted); margin-top: 4px; }
 
-.stat-compare-row {
-  display: flex; align-items: center;
-  gap: 6px; margin-bottom: 10px; font-size: 11px;
-}
+.stat-compare-row { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 11px; }
 .sc-val { width: 36px; font-weight: 600; }
 .sc-label { font-size: 10px; color: var(--muted); flex: 1; text-align: center; }
 .sc-track { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
@@ -225,46 +201,157 @@ body {
 
 .match-row {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 8px 0;
-  border-bottom: 0.5px solid var(--border);
-  font-size: 12px;
+  padding: 8px 0; border-bottom: 0.5px solid var(--border); font-size: 12px;
 }
 .match-row:last-child { border: none; }
 .match-info { color: var(--muted); font-size: 11px; }
 
-/* LOADING */
-.loading {
-  display: flex; align-items: center; justify-content: center;
-  padding: 40px; color: var(--muted); font-size: 13px;
-}
+.loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--muted); font-size: 13px; }
 
-/* SETTINGS */
-.setting-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 12px 0;
-  border-bottom: 0.5px solid var(--border);
-}
+.setting-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 0.5px solid var(--border); }
 .setting-row:last-child { border: none; }
 .setting-label { font-size: 14px; }
 .setting-sub { font-size: 11px; color: var(--muted); }
-.toggle {
-  width: 44px; height: 24px; border-radius: 12px;
-  background: var(--accent); border: none; cursor: pointer;
-  position: relative; transition: background .2s;
-}
-.toggle::after {
-  content: ''; position: absolute;
-  width: 18px; height: 18px; border-radius: 50%;
-  background: #fff; top: 3px; right: 3px;
-  transition: right .2s;
-}
+.toggle { width: 44px; height: 24px; border-radius: 12px; background: var(--accent); border: none; cursor: pointer; position: relative; transition: background .2s; }
+.toggle::after { content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: #fff; top: 3px; right: 3px; transition: right .2s; }
 .toggle.off { background: var(--border); }
 .toggle.off::after { right: auto; left: 3px; }
+
+/* ── КЛИКАБЕЛЬНАЯ КАРТОЧКА МАТЧА ── */
+.match-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  margin: 0 12px 12px;
+  padding: 12px 14px 28px;
+  cursor: pointer;
+  border: 0.5px solid transparent;
+  transition: border-color .15s, transform .1s;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+.match-card:active { transform: scale(0.98); border-color: var(--accent); }
+.match-card:hover { border-color: var(--border); }
+.match-card-hint {
+  position: absolute; bottom: 8px; right: 12px;
+  font-size: 9px; color: var(--muted);
+  display: flex; align-items: center; gap: 3px;
+}
+
+/* ── МОДАЛЬНОЕ ОКНО ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.78);
+  z-index: 200;
+  display: none;
+  align-items: flex-end;
+}
+.modal-overlay.open {
+  display: flex;
+  animation: mFadeIn .2s ease;
+}
+@keyframes mFadeIn { from { opacity:0 } to { opacity:1 } }
+
+.modal-sheet {
+  background: var(--bg);
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-height: 92vh;
+  overflow-y: auto;
+  animation: mSlideUp .25s ease;
+  padding-bottom: 40px;
+}
+@keyframes mSlideUp { from { transform: translateY(60px); opacity:0 } to { transform: translateY(0); opacity:1 } }
+
+.modal-handle {
+  width: 36px; height: 4px; background: var(--border);
+  border-radius: 2px; margin: 12px auto 14px;
+}
+.modal-header {
+  padding: 0 16px 14px;
+  border-bottom: 0.5px solid var(--border);
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+.modal-title { font-size: 18px; font-weight: 700; }
+.modal-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.modal-close {
+  background: var(--border); border: none; color: var(--text);
+  font-size: 14px; width: 28px; height: 28px; border-radius: 50%;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-left: 12px; margin-top: 2px;
+}
+
+.msec { padding: 14px 16px 0; }
+.msec-title {
+  font-size: 10px; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+}
+
+/* Вероятность */
+.modal-prob-card {
+  background: var(--card); border-radius: 12px; padding: 14px;
+  margin-bottom: 10px;
+}
+.modal-prob-names {
+  display: flex; justify-content: space-between;
+  font-size: 13px; font-weight: 700; margin-bottom: 4px;
+}
+.modal-prob-nums {
+  display: flex; justify-content: space-between;
+  font-size: 26px; font-weight: 800; margin-bottom: 10px;
+}
+.modal-prob-track {
+  height: 10px; background: var(--border); border-radius: 5px; overflow: hidden;
+}
+.modal-prob-fill {
+  height: 100%; border-radius: 5px;
+  background: linear-gradient(90deg, var(--accent), #a78bfa);
+  transition: width .6s ease;
+}
+
+/* Коэффициенты */
+.modal-odds { display: flex; gap: 8px; margin-bottom: 10px; }
+.modal-odds-box { flex:1; background:var(--card); border-radius:12px; padding:10px 8px; text-align:center; }
+.modal-odds-name { font-size:10px; color:var(--muted); margin-bottom:4px; }
+.modal-odds-val { font-size:22px; font-weight:700; }
+.modal-odds-prob { font-size:10px; color:var(--muted); margin-top:3px; }
+
+/* 3 критерия */
+.criteria-card { background:var(--card); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
+.criteria-row { display:flex; align-items:flex-start; gap:10px; padding:9px 0; border-bottom:0.5px solid var(--border); }
+.criteria-row:last-child { border:none; padding-bottom:0; }
+.criteria-num { font-size:16px; width:24px; flex-shrink:0; margin-top:1px; }
+.criteria-body { flex:1; }
+.criteria-lbl { font-size:12px; font-weight:600; }
+.criteria-detail { font-size:11px; color:var(--muted); margin-top:3px; line-height:1.55; }
+.criteria-badge { margin-top:6px; }
+
+/* AI блок */
+.ai-card {
+  background: linear-gradient(135deg, #1a1f38, #1c2030);
+  border: 0.5px solid #3a4070;
+  border-radius: 12px; padding: 14px;
+  margin-bottom: 10px;
+}
+.ai-header { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.ai-icon {
+  width:30px; height:30px; border-radius:8px;
+  background: linear-gradient(135deg, var(--accent), #a78bfa);
+  display:flex; align-items:center; justify-content:center; font-size:16px;
+}
+.ai-label { font-size:12px; font-weight:700; color:var(--accent); }
+.ai-sublabel { font-size:10px; color:var(--muted); }
+.ai-body { font-size:12px; line-height:1.75; color:var(--text); white-space:pre-line; }
+.ai-spinner {
+  width:18px; height:18px; border-radius:50%;
+  border:2px solid var(--border); border-top-color:var(--accent);
+  animation:spin .8s linear infinite; display:inline-block; vertical-align:middle; margin-right:8px;
+}
+@keyframes spin { to { transform:rotate(360deg) } }
 </style>
 </head>
 <body>
 
-<!-- PAGE: RATINGS -->
+<!-- RATINGS -->
 <div class="page active" id="page-ratings">
   <div class="page-header">
     <div class="page-header-icon">🏆</div>
@@ -275,39 +362,28 @@ body {
     <button class="surf-pill" data-surf="clay">Грунт</button>
     <button class="surf-pill" data-surf="grass">Трава</button>
   </div>
-  <div class="card" id="ratings-list">
-    <div class="loading">Загрузка...</div>
-  </div>
+  <div class="card" id="ratings-list"><div class="loading">Загрузка...</div></div>
 </div>
 
-<!-- PAGE: PREDICT -->
+<!-- PREDICT -->
 <div class="page" id="page-predict">
   <div class="page-header">
     <div class="page-header-icon">🔮</div>
     <div><h1>Прогноз матча</h1><p>Введи двух игроков</p></div>
   </div>
-
   <div class="section-label">Игрок 1</div>
-  <div class="input-wrap">
-    <input class="search-input" id="input-p1" placeholder="Начни вводить фамилию..." autocomplete="off">
-  </div>
+  <div class="input-wrap"><input class="search-input" id="input-p1" placeholder="Начни вводить фамилию..." autocomplete="off"></div>
   <div class="dropdown" id="drop-p1"></div>
-
   <div class="section-label">Игрок 2</div>
-  <div class="input-wrap">
-    <input class="search-input" id="input-p2" placeholder="Начни вводить фамилию..." autocomplete="off">
-  </div>
+  <div class="input-wrap"><input class="search-input" id="input-p2" placeholder="Начни вводить фамилию..." autocomplete="off"></div>
   <div class="dropdown" id="drop-p2"></div>
-
   <div class="section-label">Покрытие</div>
   <div class="surf-row" id="predict-surfs">
     <button class="surf-pill active" data-surf="hard">Хард</button>
     <button class="surf-pill" data-surf="clay">Грунт</button>
     <button class="surf-pill" data-surf="grass">Трава</button>
   </div>
-
   <button class="btn-primary" id="btn-predict" disabled>Рассчитать прогноз</button>
-
   <div class="predict-result" id="predict-result">
     <div class="card">
       <div class="vs-block">
@@ -323,63 +399,43 @@ body {
       </div>
       <div class="prob-track"><div class="prob-fill-p1" id="res-bar" style="width:50%"></div></div>
       <div class="stats-row">
-        <div class="stat-item">
-          <div class="stat-label">Elo P1</div>
-          <div class="stat-val" id="res-elo1">—</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">Elo P2</div>
-          <div class="stat-val" id="res-elo2">—</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">Форма P1</div>
-          <div class="stat-val" id="res-form1">—</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">Уверенность</div>
-          <div class="stat-val" id="res-conf">—</div>
-        </div>
+        <div class="stat-item"><div class="stat-label">Elo P1</div><div class="stat-val" id="res-elo1">—</div></div>
+        <div class="stat-item"><div class="stat-label">Elo P2</div><div class="stat-val" id="res-elo2">—</div></div>
+        <div class="stat-item"><div class="stat-label">Форма P1</div><div class="stat-val" id="res-form1">—</div></div>
+        <div class="stat-item"><div class="stat-label">Уверенность</div><div class="stat-val" id="res-conf">—</div></div>
       </div>
     </div>
-
     <div class="section-label">Совет по ставке</div>
     <div class="card" id="bet-advice"></div>
   </div>
 </div>
 
-<!-- PAGE: H2H -->
+<!-- H2H -->
 <div class="page" id="page-h2h">
   <div class="page-header">
     <div class="page-header-icon">⚔️</div>
     <div><h1>Head to Head</h1><p>История встреч</p></div>
   </div>
-
   <div class="section-label">Игрок 1</div>
-  <div class="input-wrap">
-    <input class="search-input" id="h2h-input-p1" placeholder="Фамилия игрока..." autocomplete="off">
-  </div>
+  <div class="input-wrap"><input class="search-input" id="h2h-input-p1" placeholder="Фамилия игрока..." autocomplete="off"></div>
   <div class="dropdown" id="h2h-drop-p1"></div>
-
   <div class="section-label">Игрок 2</div>
-  <div class="input-wrap">
-    <input class="search-input" id="h2h-input-p2" placeholder="Фамилия игрока..." autocomplete="off">
-  </div>
+  <div class="input-wrap"><input class="search-input" id="h2h-input-p2" placeholder="Фамилия игрока..." autocomplete="off"></div>
   <div class="dropdown" id="h2h-drop-p2"></div>
-
   <button class="btn-primary" id="btn-h2h" disabled>Показать H2H</button>
   <div id="h2h-result"></div>
 </div>
 
-<!-- PAGE: MATCHES -->
+<!-- MATCHES -->
 <div class="page" id="page-matches">
   <div class="page-header">
     <div class="page-header-icon">📅</div>
-    <div><h1>Матчи сегодня</h1><p>Коэффициенты + наш прогноз</p></div>
+    <div><h1>Матчи сегодня</h1><p>Нажми на матч — полный анализ</p></div>
   </div>
   <div id="matches-list"><div class="loading">Загрузка...</div></div>
 </div>
 
-<!-- PAGE: SETTINGS -->
+<!-- SETTINGS -->
 <div class="page" id="page-settings">
   <div class="page-header">
     <div class="page-header-icon">⚙️</div>
@@ -401,18 +457,9 @@ body {
   </div>
   <div class="section-label">О приложении</div>
   <div class="card">
-    <div class="setting-row">
-      <div><div class="setting-label">Данные</div></div>
-      <span style="color:var(--muted);font-size:12px">ATP 2015–2025</span>
-    </div>
-    <div class="setting-row">
-      <div><div class="setting-label">Точность модели</div></div>
-      <span style="color:var(--green);font-size:12px;font-weight:600">~68%</span>
-    </div>
-    <div class="setting-row">
-      <div><div class="setting-label">Версия</div></div>
-      <span style="color:var(--muted);font-size:12px">1.0.0</span>
-    </div>
+    <div class="setting-row"><div><div class="setting-label">Данные</div></div><span style="color:var(--muted);font-size:12px">ATP 2015–2025</span></div>
+    <div class="setting-row"><div><div class="setting-label">Точность модели</div></div><span style="color:var(--green);font-size:12px;font-weight:600">~68%</span></div>
+    <div class="setting-row"><div><div class="setting-label">Версия</div></div><span style="color:var(--muted);font-size:12px">1.1.0</span></div>
   </div>
   <div style="padding:16px;text-align:center;color:var(--muted);font-size:11px;line-height:1.6">
     Прогнозы основаны на статистике.<br>Не является финансовым советом.
@@ -421,45 +468,92 @@ body {
 
 <!-- BOTTOM NAV -->
 <nav class="nav">
-  <div class="nav-item active" data-page="ratings">
-    <span class="nav-icon">🏆</span><span>Рейтинг</span>
-  </div>
-  <div class="nav-item" data-page="predict">
-    <span class="nav-icon">🔮</span><span>Прогноз</span>
-  </div>
-  <div class="nav-item" data-page="h2h">
-    <span class="nav-icon">⚔️</span><span>H2H</span>
-  </div>
-  <div class="nav-item" data-page="matches">
-    <span class="nav-icon">📅</span><span>Матчи</span>
-  </div>
-  <div class="nav-item" data-page="settings">
-    <span class="nav-icon">⚙️</span><span>Настройки</span>
-  </div>
+  <div class="nav-item active" data-page="ratings"><span class="nav-icon">🏆</span><span>Рейтинг</span></div>
+  <div class="nav-item" data-page="predict"><span class="nav-icon">🔮</span><span>Прогноз</span></div>
+  <div class="nav-item" data-page="h2h"><span class="nav-icon">⚔️</span><span>H2H</span></div>
+  <div class="nav-item" data-page="matches"><span class="nav-icon">📅</span><span>Матчи</span></div>
+  <div class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span><span>Настройки</span></div>
 </nav>
+
+<!-- ═══ MODAL: Детальный анализ матча ═══ -->
+<div class="modal-overlay" id="match-modal" onclick="handleOverlayClick(event)">
+  <div class="modal-sheet" id="modal-sheet">
+    <div class="modal-handle"></div>
+
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-title">Матч</div>
+        <div class="modal-sub" id="modal-sub"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <!-- ML Прогноз -->
+    <div class="msec" id="msec-prob" style="display:none">
+      <div class="msec-title">Наш прогноз (ML модель)</div>
+      <div class="modal-prob-card">
+        <div class="modal-prob-names">
+          <span id="m-name1" style="color:var(--accent)"></span>
+          <span id="m-name2" style="color:var(--green)"></span>
+        </div>
+        <div class="modal-prob-nums">
+          <span id="m-prob1" style="color:var(--accent)"></span>
+          <span id="m-prob2" style="color:var(--green)"></span>
+        </div>
+        <div class="modal-prob-track">
+          <div class="modal-prob-fill" id="m-prob-fill" style="width:50%"></div>
+        </div>
+        <div id="m-value-hint" style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.5"></div>
+      </div>
+    </div>
+
+    <!-- Коэффициенты -->
+    <div class="msec">
+      <div class="msec-title">Коэффициенты букмекера</div>
+      <div class="modal-odds" id="m-odds"></div>
+    </div>
+
+    <!-- 3 критерия -->
+    <div class="msec">
+      <div class="msec-title">3 критерия анализа</div>
+      <div class="criteria-card" id="m-criteria"></div>
+    </div>
+
+    <!-- Gemini AI -->
+    <div class="msec">
+      <div class="msec-title">Gemini AI анализ</div>
+      <div class="ai-card">
+        <div class="ai-header">
+          <div class="ai-icon">🤖</div>
+          <div>
+            <div class="ai-label">Gemini AI</div>
+            <div class="ai-sublabel">ATP статистика 2024–2026</div>
+          </div>
+        </div>
+        <div id="m-ai"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <script>
 const API = 'https://tennis-backend-9zwn.onrender.com';
 
-// Telegram WebApp init
 const tg = window.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
 
-// Универсальный fetch с правильными заголовками
 async function apiFetch(url) {
   const res = await fetch(url, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
     mode: 'cors',
   });
   if (!res.ok) throw new Error('Server error: ' + res.status);
   return res.json();
 }
 
-// ─── Navigation ───
+// Navigation
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => {
     const page = item.dataset.page;
@@ -470,25 +564,21 @@ document.querySelectorAll('.nav-item').forEach(item => {
   });
 });
 
-// ─── Surface pills ───
 function initSurfPills(containerId, callback) {
-  const container = document.getElementById(containerId);
-  container.querySelectorAll('.surf-pill').forEach(pill => {
+  document.getElementById(containerId).querySelectorAll('.surf-pill').forEach(pill => {
     pill.addEventListener('click', () => {
-      container.querySelectorAll('.surf-pill').forEach(p => p.classList.remove('active'));
+      document.getElementById(containerId).querySelectorAll('.surf-pill').forEach(p => p.classList.remove('active'));
       pill.classList.add('active');
       callback(pill.dataset.surf);
     });
   });
 }
 
-// ─── Ratings Page ───
-let currentSurf = 'hard';
+// Ratings
 const avatarColors = [
-  ['#2d3a5e','#7c8dff'], ['#1a3a2a','#4ade80'], ['#3a1a2a','#f472b6'],
-  ['#3a2a10','#fbbf24'], ['#2a1a3a','#c084fc'], ['#3a1010','#f87171'],
-  ['#1a2a3a','#60a5fa'], ['#2a3a1a','#86efac'], ['#3a3a1a','#fde68a'],
-  ['#1a3a3a','#5eead4'],
+  ['#2d3a5e','#7c8dff'],['#1a3a2a','#4ade80'],['#3a1a2a','#f472b6'],
+  ['#3a2a10','#fbbf24'],['#2a1a3a','#c084fc'],['#3a1010','#f87171'],
+  ['#1a2a3a','#60a5fa'],['#2a3a1a','#86efac'],['#3a3a1a','#fde68a'],['#1a3a3a','#5eead4'],
 ];
 
 async function loadRatings(surf) {
@@ -499,14 +589,13 @@ async function loadRatings(surf) {
     el.innerHTML = data.slice(0, 20).map((p, i) => {
       const [bg, fg] = avatarColors[i % avatarColors.length];
       const initials = p.player.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-      const formPct = Math.round(p.form * 100);
       return `
         <div class="player-row">
           <span class="rank">#${i+1}</span>
           <div class="avatar" style="background:${bg};color:${fg}">${initials}</div>
           <div>
             <div class="pname">${p.player}</div>
-            <div class="pmeta">форма ${formPct}% · ${p.matches_total} матчей</div>
+            <div class="pmeta">форма ${Math.round(p.form*100)}% · ${p.matches_total} матчей</div>
           </div>
           <div class="elo-badge">${Math.round(p.elo)}</div>
         </div>`;
@@ -515,16 +604,13 @@ async function loadRatings(surf) {
     el.innerHTML = '<div class="loading">Ошибка загрузки. Проверь сервер.</div>';
   }
 }
-
-initSurfPills('rating-surfs', surf => { currentSurf = surf; loadRatings(surf); });
+initSurfPills('rating-surfs', surf => loadRatings(surf));
 loadRatings('hard');
 
-// ─── Player Search Autocomplete ───
+// Autocomplete
 let allPlayers = [];
 async function loadPlayers() {
-  try {
-    allPlayers = await apiFetch(`${API}/players`);
-  } catch(e) { allPlayers = []; }
+  try { allPlayers = await apiFetch(`${API}/players`); } catch(e) {}
 }
 loadPlayers();
 
@@ -536,9 +622,7 @@ function setupAutocomplete(inputId, dropId, onSelect) {
     if (q.length < 2) { drop.classList.remove('open'); return; }
     const matches = allPlayers.filter(p => p.toLowerCase().includes(q)).slice(0, 8);
     if (!matches.length) { drop.classList.remove('open'); return; }
-    drop.innerHTML = matches.map(p =>
-      `<div class="dropdown-item">${p}</div>`
-    ).join('');
+    drop.innerHTML = matches.map(p => `<div class="dropdown-item">${p}</div>`).join('');
     drop.classList.add('open');
     drop.querySelectorAll('.dropdown-item').forEach(item => {
       item.addEventListener('click', () => {
@@ -553,236 +637,163 @@ function setupAutocomplete(inputId, dropId, onSelect) {
   });
 }
 
-// ─── Predict Page ───
-let p1Selected = '', p2Selected = '', predictSurf = 'hard';
-
-setupAutocomplete('input-p1', 'drop-p1', name => {
-  p1Selected = name; checkPredictReady();
-});
-setupAutocomplete('input-p2', 'drop-p2', name => {
-  p2Selected = name; checkPredictReady();
-});
-initSurfPills('predict-surfs', s => { predictSurf = s; });
-
-document.getElementById('input-p1').addEventListener('input', () => { p1Selected = ''; checkPredictReady(); });
-document.getElementById('input-p2').addEventListener('input', () => { p2Selected = ''; checkPredictReady(); });
-
-function checkPredictReady() {
-  document.getElementById('btn-predict').disabled = !(p1Selected && p2Selected);
-}
+// Predict
+let p1Selected='', p2Selected='', predictSurf='hard';
+setupAutocomplete('input-p1', 'drop-p1', n => { p1Selected=n; checkPredictReady(); });
+setupAutocomplete('input-p2', 'drop-p2', n => { p2Selected=n; checkPredictReady(); });
+initSurfPills('predict-surfs', s => { predictSurf=s; });
+document.getElementById('input-p1').addEventListener('input', () => { p1Selected=''; checkPredictReady(); });
+document.getElementById('input-p2').addEventListener('input', () => { p2Selected=''; checkPredictReady(); });
+function checkPredictReady() { document.getElementById('btn-predict').disabled = !(p1Selected && p2Selected); }
 
 document.getElementById('btn-predict').addEventListener('click', async () => {
   const btn = document.getElementById('btn-predict');
-  btn.textContent = 'Считаю...'; btn.disabled = true;
+  btn.textContent='Считаю...'; btn.disabled=true;
   try {
     const d = await apiFetch(`${API}/predict?p1=${encodeURIComponent(p1Selected)}&p2=${encodeURIComponent(p2Selected)}&surface=${predictSurf}`);
     showPredictResult(d);
-  } catch(e) {
-    alert('Ошибка сервера. Убедись что бэкенд запущен.');
-  } finally {
-    btn.textContent = 'Рассчитать прогноз'; btn.disabled = false;
-  }
+  } catch(e) { alert('Ошибка сервера.'); }
+  finally { btn.textContent='Рассчитать прогноз'; btn.disabled=false; }
 });
 
 function showPredictResult(d) {
-  const pct1 = Math.round(d.prob_p1 * 100);
-  const pct2 = 100 - pct1;
-  document.getElementById('res-name1').textContent = d.player1.split(' ')[0];
-  document.getElementById('res-name2').textContent = d.player2.split(' ')[0];
-  document.getElementById('res-prob1').textContent = pct1 + '%';
-  document.getElementById('res-prob2').textContent = pct2 + '%';
-  document.getElementById('res-bar').style.width = pct1 + '%';
-  document.getElementById('res-elo1').textContent = Math.round(d.elo1);
-  document.getElementById('res-elo2').textContent = Math.round(d.elo2);
-  document.getElementById('res-form1').textContent = Math.round(d.form1 * 100) + '%';
-
-  const diff = Math.abs(d.prob_p1 - 0.5);
-  let confLabel, confClass;
-  if (diff > 0.2) { confLabel = 'Высокая'; confClass = 'badge-green'; }
-  else if (diff > 0.1) { confLabel = 'Средняя'; confClass = 'badge-amber'; }
-  else { confLabel = 'Низкая'; confClass = 'badge-red'; }
-  document.getElementById('res-conf').innerHTML = `<span class="badge ${confClass}">${confLabel}</span>`;
-
-  const winner = pct1 > pct2 ? d.player1 : d.player2;
-  const prob = Math.max(pct1, pct2);
-  const adviceEl = document.getElementById('bet-advice');
-  if (diff < 0.08) {
-    adviceEl.innerHTML = `<span style="color:var(--muted);font-size:12px">Матч слишком равный (${prob}%). Лучше пропустить — нет явного преимущества.</span>`;
-  } else {
-    adviceEl.innerHTML = `
-      <div style="font-size:12px;line-height:1.7;color:var(--muted)">
-        Модель даёт <strong style="color:var(--text)">${winner}</strong> вероятность <strong style="color:var(--accent)">${prob}%</strong>.<br>
-        Сравни с коэффициентом букмекера: если коэф > <strong style="color:var(--text)">${(100/prob).toFixed(2)}</strong> — есть ценность (value).
-      </div>`;
-  }
-
+  const pct1=Math.round(d.prob_p1*100), pct2=100-pct1;
+  document.getElementById('res-name1').textContent=d.player1.split(' ')[0];
+  document.getElementById('res-name2').textContent=d.player2.split(' ')[0];
+  document.getElementById('res-prob1').textContent=pct1+'%';
+  document.getElementById('res-prob2').textContent=pct2+'%';
+  document.getElementById('res-bar').style.width=pct1+'%';
+  document.getElementById('res-elo1').textContent=Math.round(d.elo1);
+  document.getElementById('res-elo2').textContent=Math.round(d.elo2);
+  document.getElementById('res-form1').textContent=Math.round(d.form1*100)+'%';
+  const diff=Math.abs(d.prob_p1-0.5);
+  let cl,cs;
+  if(diff>0.2){cl='Высокая';cs='badge-green';}
+  else if(diff>0.1){cl='Средняя';cs='badge-amber';}
+  else{cl='Низкая';cs='badge-red';}
+  document.getElementById('res-conf').innerHTML=`<span class="badge ${cs}">${cl}</span>`;
+  const winner=pct1>pct2?d.player1:d.player2, prob=Math.max(pct1,pct2);
+  document.getElementById('bet-advice').innerHTML = diff<0.08
+    ? `<span style="color:var(--muted);font-size:12px">Матч слишком равный (${prob}%). Лучше пропустить.</span>`
+    : `<div style="font-size:12px;line-height:1.7;color:var(--muted)">Модель даёт <strong style="color:var(--text)">${winner}</strong> вероятность <strong style="color:var(--accent)">${prob}%</strong>.<br>Если коэф > <strong style="color:var(--text)">${(100/prob).toFixed(2)}</strong> — есть ценность (value).</div>`;
   document.getElementById('predict-result').classList.add('show');
-  document.getElementById('predict-result').scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('predict-result').scrollIntoView({behavior:'smooth'});
 }
 
-// ─── H2H Page ───
-let h2hP1 = '', h2hP2 = '';
-setupAutocomplete('h2h-input-p1', 'h2h-drop-p1', n => { h2hP1 = n; checkH2HReady(); });
-setupAutocomplete('h2h-input-p2', 'h2h-drop-p2', n => { h2hP2 = n; checkH2HReady(); });
-document.getElementById('h2h-input-p1').addEventListener('input', () => { h2hP1 = ''; checkH2HReady(); });
-document.getElementById('h2h-input-p2').addEventListener('input', () => { h2hP2 = ''; checkH2HReady(); });
+// H2H
+let h2hP1='', h2hP2='';
+setupAutocomplete('h2h-input-p1','h2h-drop-p1', n=>{h2hP1=n;checkH2HReady();});
+setupAutocomplete('h2h-input-p2','h2h-drop-p2', n=>{h2hP2=n;checkH2HReady();});
+document.getElementById('h2h-input-p1').addEventListener('input',()=>{h2hP1='';checkH2HReady();});
+document.getElementById('h2h-input-p2').addEventListener('input',()=>{h2hP2='';checkH2HReady();});
+function checkH2HReady(){document.getElementById('btn-h2h').disabled=!(h2hP1&&h2hP2);}
 
-function checkH2HReady() {
-  document.getElementById('btn-h2h').disabled = !(h2hP1 && h2hP2);
-}
-
-document.getElementById('btn-h2h').addEventListener('click', async () => {
-  const btn = document.getElementById('btn-h2h');
-  btn.textContent = 'Загрузка...'; btn.disabled = true;
-  try {
-    const d = await apiFetch(`${API}/h2h?p1=${encodeURIComponent(h2hP1)}&p2=${encodeURIComponent(h2hP2)}`);
+document.getElementById('btn-h2h').addEventListener('click', async()=>{
+  const btn=document.getElementById('btn-h2h');
+  btn.textContent='Загрузка...'; btn.disabled=true;
+  try{
+    const d=await apiFetch(`${API}/h2h?p1=${encodeURIComponent(h2hP1)}&p2=${encodeURIComponent(h2hP2)}`);
     renderH2H(d);
-  } catch(e) {
-    alert('Ошибка сервера.');
-  } finally {
-    btn.textContent = 'Показать H2H'; btn.disabled = false;
-  }
+  }catch(e){alert('Ошибка сервера.');}
+  finally{btn.textContent='Показать H2H'; btn.disabled=false;}
 });
 
 function renderH2H(d) {
-  const pct1 = d.total > 0 ? Math.round(d.wins1 / d.total * 100) : 50;
-  const container = document.getElementById('h2h-result');
-  const matches = (d.recent || []).slice(-6).reverse();
-  container.innerHTML = `
+  const pct1=d.total>0?Math.round(d.wins1/d.total*100):50;
+  const matches=(d.recent||[]).slice(-6).reverse();
+  document.getElementById('h2h-result').innerHTML=`
     <div class="card">
       <div class="h2h-score">
-        <div style="text-align:center;flex:1">
-          <div class="h2h-num" style="color:var(--accent)">${d.wins1}</div>
-          <div class="h2h-name">${d.player1.split(' ')[0]}</div>
-        </div>
+        <div style="text-align:center;flex:1"><div class="h2h-num" style="color:var(--accent)">${d.wins1}</div><div class="h2h-name">${d.player1.split(' ')[0]}</div></div>
         <div style="color:var(--muted);font-size:13px">VS</div>
-        <div style="text-align:center;flex:1">
-          <div class="h2h-num" style="color:var(--green)">${d.wins2}</div>
-          <div class="h2h-name">${d.player2.split(' ')[0]}</div>
-        </div>
+        <div style="text-align:center;flex:1"><div class="h2h-num" style="color:var(--green)">${d.wins2}</div><div class="h2h-name">${d.player2.split(' ')[0]}</div></div>
       </div>
-      <div class="prob-track" style="margin-bottom:16px">
-        <div class="prob-fill-p1" style="width:${pct1}%"></div>
-      </div>
-      ${Object.entries(d.by_surface || {}).map(([surf, s]) => {
-        const pct = s.total > 0 ? Math.round(s.wins1/s.total*100) : 50;
-        const surfRu = {Hard:'Хард',Clay:'Грунт',Grass:'Трава'}[surf] || surf;
-        return `
-          <div class="stat-compare-row">
-            <div class="sc-val" style="color:var(--accent)">${s.wins1}</div>
-            <div class="sc-track"><div class="sc-fill" style="width:${pct}%;background:var(--accent)"></div></div>
-            <div class="sc-label">${surfRu}</div>
-            <div class="sc-track"><div class="sc-fill" style="width:${100-pct}%;background:var(--green);float:right"></div></div>
-            <div class="sc-val" style="color:var(--green);text-align:right">${s.wins2}</div>
-          </div>`;
+      <div class="prob-track" style="margin-bottom:16px"><div class="prob-fill-p1" style="width:${pct1}%"></div></div>
+      ${Object.entries(d.by_surface||{}).map(([surf,s])=>{
+        const pct=s.total>0?Math.round(s.wins1/s.total*100):50;
+        const ru={Hard:'Хард',Clay:'Грунт',Grass:'Трава'}[surf]||surf;
+        return `<div class="stat-compare-row">
+          <div class="sc-val" style="color:var(--accent)">${s.wins1}</div>
+          <div class="sc-track"><div class="sc-fill" style="width:${pct}%;background:var(--accent)"></div></div>
+          <div class="sc-label">${ru}</div>
+          <div class="sc-track"><div class="sc-fill" style="width:${100-pct}%;background:var(--green);float:right"></div></div>
+          <div class="sc-val" style="color:var(--green);text-align:right">${s.wins2}</div>
+        </div>`;
       }).join('')}
     </div>
     <div class="section-label">Последние матчи</div>
     <div class="card">
-      ${matches.map(m => {
-        const winner = m.winner;
-        const isP1 = winner.includes(d.player1.split(' ')[0]);
-        const badgeCls = isP1 ? 'badge-amber' : 'badge-green';
-        const surfRu = {Hard:'Хард',Clay:'Грунт',Grass:'Трава'}[m.surface] || m.surface;
-        return `
-          <div class="match-row">
-            <div>
-              <div>${m.tourney}</div>
-              <div class="match-info">${m.date} · ${surfRu} · ${m.round}</div>
-            </div>
-            <span class="badge ${badgeCls}">${winner.split(' ')[0]}</span>
-          </div>`;
-      }).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px 0">Матчей не найдено</div>'}
+      ${matches.map(m=>{
+        const isP1=m.winner.includes(d.player1.split(' ')[0]);
+        const ru={Hard:'Хард',Clay:'Грунт',Grass:'Трава'}[m.surface]||m.surface;
+        return `<div class="match-row">
+          <div><div>${m.tourney}</div><div class="match-info">${m.date} · ${ru} · ${m.round}</div></div>
+          <span class="badge ${isP1?'badge-amber':'badge-green'}">${m.winner.split(' ')[0]}</span>
+        </div>`;
+      }).join('')||'<div style="color:var(--muted);font-size:12px;padding:8px 0">Матчей не найдено</div>'}
     </div>`;
-  container.scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('h2h-result').scrollIntoView({behavior:'smooth'});
 }
 
-// ─── Matches Page ───
+// ─── MATCHES + MODAL ───
+let cachedMatches = [];
+
 async function loadMatches() {
   const el = document.getElementById('matches-list');
   el.innerHTML = '<div class="loading">Загрузка матчей...</div>';
   try {
     const data = await apiFetch(`${API}/upcoming`);
-    if (!data.length) {
-      el.innerHTML = '<div class="loading">Матчей не найдено</div>';
-      return;
-    }
-    el.innerHTML = data.map(m => {
-      const prob = m.our_prob ? Math.round(m.our_prob * 100) : null;
-      const prob2 = prob ? 100 - prob : null;
-      const homeName = m.home.split(' ').pop();
-      const awayName = m.away.split(' ').pop();
-
-      // Критерий 1: Исход
-      const valueClass = m.value_h2h && m.value_h2h.includes('✅') ? 'badge-green' : 'badge-amber';
-
-      // Критерий 2: Тотал
-      const totalClass = m.value_total ? 'badge-green' : 'badge-amber';
-
-      // Критерий 3: Сеты
-      const setClass = m.value_set && m.value_set.includes('3 сета') ? 'badge-amber' : 'badge-green';
+    cachedMatches = data;
+    if (!data.length) { el.innerHTML='<div class="loading">Матчей не найдено</div>'; return; }
+    el.innerHTML = data.map((m, idx) => {
+      const prob = m.our_prob ? Math.round(m.our_prob*100) : null;
+      const prob2 = prob ? 100-prob : null;
+      const hn = m.home.split(' ').pop();
+      const an = m.away.split(' ').pop();
+      const isValue = m.value_h2h && m.value_h2h.includes('✅');
+      const vCls = isValue ? 'badge-green' : 'badge-amber';
+      const tCls = m.value_total ? 'badge-green' : 'badge-amber';
+      const sCls = m.value_set && m.value_set.includes('3 сета') ? 'badge-amber' : 'badge-green';
 
       return `
-        <div class="card" style="margin-bottom:12px">
-
-          <!-- Шапка матча -->
+        <div class="match-card" onclick="openModal(${idx})">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
             <div>
-              <div style="font-size:13px;font-weight:600;color:var(--text)">${homeName} vs ${awayName}</div>
+              <div style="font-size:13px;font-weight:600">
+                ${hn} vs ${an}
+                ${isValue ? '<span class="badge badge-green" style="font-size:9px;margin-left:6px;padding:2px 7px">VALUE</span>' : ''}
+              </div>
               <div style="font-size:10px;color:var(--muted);margin-top:2px">${m.tournament} · ${m.date} ${m.time} UTC</div>
             </div>
             <div style="font-size:10px;color:var(--muted)">${m.bookmaker}</div>
           </div>
 
-          <!-- Коэффициенты букмекера -->
           <div style="display:flex;gap:6px;margin-bottom:10px">
             <div style="background:var(--border);border-radius:10px;padding:8px;flex:1;text-align:center">
-              <div style="font-size:9px;color:var(--muted);margin-bottom:3px">${homeName}</div>
-              <div style="font-size:18px;font-weight:700;color:var(--accent)">${m.odds_home || '—'}</div>
-              ${prob ? `<div style="font-size:9px;color:var(--muted);margin-top:2px">наш: ${prob}%</div>` : ''}
+              <div style="font-size:9px;color:var(--muted);margin-bottom:3px">${hn}</div>
+              <div style="font-size:18px;font-weight:700;color:var(--accent)">${m.odds_home||'—'}</div>
+              ${prob?`<div style="font-size:9px;color:var(--muted);margin-top:2px">наш: ${prob}%</div>`:''}
             </div>
             <div style="background:var(--border);border-radius:10px;padding:8px;flex:1;text-align:center">
-              <div style="font-size:9px;color:var(--muted);margin-bottom:3px">${awayName}</div>
-              <div style="font-size:18px;font-weight:700;color:var(--green)">${m.odds_away || '—'}</div>
-              ${prob2 ? `<div style="font-size:9px;color:var(--muted);margin-top:2px">наш: ${prob2}%</div>` : ''}
+              <div style="font-size:9px;color:var(--muted);margin-bottom:3px">${an}</div>
+              <div style="font-size:18px;font-weight:700;color:var(--green)">${m.odds_away||'—'}</div>
+              ${prob2?`<div style="font-size:9px;color:var(--muted);margin-top:2px">наш: ${prob2}%</div>`:''}
             </div>
-            ${m.total_line ? `
+            ${m.total_line?`
             <div style="background:var(--border);border-radius:10px;padding:8px;flex:1;text-align:center">
               <div style="font-size:9px;color:var(--muted);margin-bottom:3px">Тотал ${m.total_line}</div>
-              <div style="font-size:12px;font-weight:600;color:var(--amber)">О: ${m.total_over || '—'}</div>
-              <div style="font-size:12px;font-weight:600;color:var(--amber)">У: ${m.total_under || '—'}</div>
-            </div>` : ''}
+              <div style="font-size:12px;font-weight:600;color:var(--amber)">О: ${m.total_over||'—'}</div>
+              <div style="font-size:12px;font-weight:600;color:var(--amber)">У: ${m.total_under||'—'}</div>
+            </div>`:''}
           </div>
 
-          <!-- Три критерия -->
-          <div style="border-top:0.5px solid var(--border);padding-top:8px">
-            <div style="font-size:9px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Наш анализ</div>
-
-            <!-- 1. Исход -->
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-              <span style="font-size:11px;color:var(--muted);width:20px">1️⃣</span>
-              <span style="font-size:11px;color:var(--text);flex:1">Исход матча</span>
-              ${m.value_h2h ? `<span class="badge ${valueClass}" style="font-size:10px">${m.value_h2h}</span>` : '<span style="font-size:10px;color:var(--muted)">нет данных</span>'}
-            </div>
-
-            <!-- 2. Тотал -->
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-              <span style="font-size:11px;color:var(--muted);width:20px">2️⃣</span>
-              <span style="font-size:11px;color:var(--text);flex:1">Тотал геймов</span>
-              ${m.value_total ? `<span class="badge ${totalClass}" style="font-size:10px">${m.value_total}</span>` :
-                m.avg_total ? `<span style="font-size:10px;color:var(--muted)">avg: ${m.avg_total} геймов</span>` :
-                '<span style="font-size:10px;color:var(--muted)">нет данных</span>'}
-            </div>
-
-            <!-- 3. Сеты -->
-            <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-size:11px;color:var(--muted);width:20px">3️⃣</span>
-              <span style="font-size:11px;color:var(--text);flex:1">Победа в сете</span>
-              ${m.value_set ? `<span class="badge ${setClass}" style="font-size:10px">${m.value_set}</span>` :
-                '<span style="font-size:10px;color:var(--muted)">нет данных</span>'}
-            </div>
+          <div style="border-top:0.5px solid var(--border);padding-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+            ${m.value_h2h?`<span class="badge ${vCls}" style="font-size:10px">1️⃣ ${m.value_h2h.replace(/[✅⚪] /,'')}</span>`:''}
+            ${m.value_total?`<span class="badge ${tCls}" style="font-size:10px">2️⃣ ${m.value_total.replace('📊 ','')}</span>`:''}
+            ${m.value_set?`<span class="badge ${sCls}" style="font-size:10px">3️⃣ ${m.value_set.replace('🎾 ','')}</span>`:''}
           </div>
 
+          <div class="match-card-hint">👆 нажми для анализа</div>
         </div>`;
     }).join('');
   } catch(e) {
@@ -790,18 +801,156 @@ async function loadMatches() {
   }
 }
 
-// Загружаем матчи при открытии вкладки
-document.querySelectorAll('.nav-item').forEach(item => {
-  if (item.dataset.page === 'matches') {
-    item.addEventListener('click', loadMatches);
+function openModal(idx) {
+  const m = cachedMatches[idx];
+  if (!m) return;
+
+  const hn = m.home.split(' ').pop();
+  const an = m.away.split(' ').pop();
+  const prob = m.our_prob ? Math.round(m.our_prob*100) : null;
+  const prob2 = prob ? 100-prob : null;
+
+  document.getElementById('modal-title').textContent = `${hn} vs ${an}`;
+  document.getElementById('modal-sub').textContent = `${m.tournament} · ${m.date} ${m.time} UTC · ${m.bookmaker}`;
+
+  // ML прогноз
+  const msecProb = document.getElementById('msec-prob');
+  if (prob) {
+    msecProb.style.display = 'block';
+    document.getElementById('m-name1').textContent = hn;
+    document.getElementById('m-name2').textContent = an;
+    document.getElementById('m-prob1').textContent = prob + '%';
+    document.getElementById('m-prob2').textContent = prob2 + '%';
+    document.getElementById('m-prob-fill').style.width = '50%';
+
+    // Value hint
+    let hint = '';
+    if (m.odds_home && prob) {
+      const needed = (100/prob).toFixed(2);
+      const isVal = parseFloat(m.odds_home) > parseFloat(needed);
+      hint = `Нужный коэф на ${hn}: <strong style="color:${isVal?'var(--green)':'var(--text)'}">> ${needed}</strong> ${isVal?'✅ ЕСТЬ VALUE':'— у букмекера нет value'}`;
+    }
+    document.getElementById('m-value-hint').innerHTML = hint;
+
+    setTimeout(() => { document.getElementById('m-prob-fill').style.width = prob + '%'; }, 120);
+  } else {
+    msecProb.style.display = 'none';
   }
+
+  // Коэффициенты
+  document.getElementById('m-odds').innerHTML = `
+    <div class="modal-odds-box">
+      <div class="modal-odds-name">${hn}</div>
+      <div class="modal-odds-val" style="color:var(--accent)">${m.odds_home||'—'}</div>
+      ${prob?`<div class="modal-odds-prob">наш: ${prob}%</div>`:''}
+    </div>
+    <div class="modal-odds-box">
+      <div class="modal-odds-name">${an}</div>
+      <div class="modal-odds-val" style="color:var(--green)">${m.odds_away||'—'}</div>
+      ${prob2?`<div class="modal-odds-prob">наш: ${prob2}%</div>`:''}
+    </div>
+    ${m.total_line?`
+    <div class="modal-odds-box">
+      <div class="modal-odds-name">Тотал ${m.total_line}</div>
+      <div style="font-size:16px;font-weight:700;color:var(--amber)">О: ${m.total_over||'—'}</div>
+      <div style="font-size:16px;font-weight:700;color:var(--amber)">У: ${m.total_under||'—'}</div>
+    </div>`:''}`;
+
+  // 3 критерия
+  const vCls = m.value_h2h && m.value_h2h.includes('✅') ? 'badge-green' : 'badge-amber';
+  const tCls = m.value_total ? 'badge-green' : 'badge-amber';
+  const sCls = m.value_set && m.value_set.includes('3 сета') ? 'badge-amber' : 'badge-green';
+
+  document.getElementById('m-criteria').innerHTML = `
+    <div class="criteria-row">
+      <div class="criteria-num">1️⃣</div>
+      <div class="criteria-body">
+        <div class="criteria-lbl">Исход матча</div>
+        <div class="criteria-detail">
+          ${prob ? `ML модель: ${hn} ${prob}% · ${an} ${prob2}%` : 'Нет данных модели'}
+          ${m.odds_home && prob ? `<br>Нужный коэф для value на ${hn}: > ${(100/prob).toFixed(2)}` : ''}
+          ${m.odds_away && prob2 ? ` / на ${an}: > ${(100/prob2).toFixed(2)}` : ''}
+        </div>
+        <div class="criteria-badge">
+          ${m.value_h2h
+            ? `<span class="badge ${vCls}">${m.value_h2h}</span>`
+            : '<span style="font-size:10px;color:var(--muted)">нет данных</span>'}
+        </div>
+      </div>
+    </div>
+    <div class="criteria-row">
+      <div class="criteria-num">2️⃣</div>
+      <div class="criteria-body">
+        <div class="criteria-lbl">Тотал геймов</div>
+        <div class="criteria-detail">
+          ${m.avg_total ? `Средний тотал обоих игроков: <strong style="color:var(--text)">${m.avg_total}</strong> геймов` : 'Нет данных'}
+          ${m.total_line ? `<br>Линия букмекера: ${m.total_line}` : ''}
+          ${m.avg_total && m.total_line
+            ? `<br>Разница: ${m.avg_total > m.total_line ? '+' : ''}${(m.avg_total - m.total_line).toFixed(1)} гемов → ${m.avg_total > m.total_line ? 'БОЛЬШЕ' : 'МЕНЬШЕ'}`
+            : ''}
+        </div>
+        <div class="criteria-badge">
+          ${m.value_total
+            ? `<span class="badge ${tCls}">${m.value_total}</span>`
+            : m.avg_total ? `<span style="font-size:10px;color:var(--muted)">avg: ${m.avg_total} геймов</span>` : '<span style="font-size:10px;color:var(--muted)">нет данных</span>'}
+        </div>
+      </div>
+    </div>
+    <div class="criteria-row">
+      <div class="criteria-num">3️⃣</div>
+      <div class="criteria-body">
+        <div class="criteria-lbl">Победа в сете / кол-во сетов</div>
+        <div class="criteria-detail">
+          ${m.three_set_pct != null
+            ? `% матчей в 3 сета (оба игрока): <strong style="color:var(--text)">${m.three_set_pct}%</strong><br>${m.three_set_pct > 50 ? 'Оба склонны к упорным матчам → вероятен 3-й сет' : 'Чаще матчи заканчиваются в 2 сета'}`
+            : 'Нет данных по сетам'}
+        </div>
+        <div class="criteria-badge">
+          ${m.value_set
+            ? `<span class="badge ${sCls}">${m.value_set}</span>`
+            : '<span style="font-size:10px;color:var(--muted)">нет данных</span>'}
+        </div>
+      </div>
+    </div>`;
+
+  // Gemini AI
+  const aiEl = document.getElementById('m-ai');
+  if (m.ai_analysis) {
+    aiEl.innerHTML = `<div class="ai-body">${m.ai_analysis}</div>`;
+  } else {
+    aiEl.innerHTML = `<span style="color:var(--muted);font-size:12px">AI анализ для этого матча недоступен</span>`;
+  }
+
+  // Открыть
+  const modal = document.getElementById('match-modal');
+  modal.classList.add('open');
+  document.getElementById('modal-sheet').scrollTop = 0;
+
+  // Закрыть при свайпе вниз
+  let ty0 = 0;
+  const sheet = document.getElementById('modal-sheet');
+  sheet.addEventListener('touchstart', e => { ty0 = e.touches[0].clientY; }, {passive:true, once:true});
+  sheet.addEventListener('touchend', e => {
+    if (e.changedTouches[0].clientY - ty0 > 80 && sheet.scrollTop === 0) closeModal();
+  }, {once:true});
+}
+
+function closeModal() {
+  document.getElementById('match-modal').classList.remove('open');
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('match-modal')) closeModal();
+}
+
+// Загрузка матчей при переходе на вкладку
+document.querySelectorAll('.nav-item').forEach(item => {
+  if (item.dataset.page === 'matches') item.addEventListener('click', loadMatches);
 });
 loadMatches();
 
-// ─── Toggles ───
-document.querySelectorAll('.toggle').forEach(t => {
-  t.addEventListener('click', () => t.classList.toggle('off'));
-});
+// Toggles
+document.querySelectorAll('.toggle').forEach(t => t.addEventListener('click', () => t.classList.toggle('off')));
 </script>
 </body>
 </html>
