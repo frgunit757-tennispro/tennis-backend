@@ -20,7 +20,7 @@ from contextlib import asynccontextmanager
 # ─── Константы ───
 DATA         = Path(".")
 ODDS_API_KEY = "7f2d9a6e51688c0e68bce9abca2876ba"
-GEMINI_KEY   = "AIzaSyAABXVc8CJTVIK0vcUMzFUQ3YIswJZ0JDY"
+GEMINI_KEY   = "AIzaSyC1EFzWSM4XRIDS1dcUYSzYlfEiE5yZoiM"
 GEMINI_URL   = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_KEY}"
 
 TENNIS_SPORTS = [
