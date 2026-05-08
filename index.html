@@ -913,18 +913,36 @@ function openModal(idx) {
       </div>
     </div>`;
 
-  // Gemini AI
+  // Gemini AI — запрашиваем на лету
   const aiEl = document.getElementById('m-ai');
-  if (m.ai_analysis) {
-    aiEl.innerHTML = `<div class="ai-body">${m.ai_analysis}</div>`;
-  } else {
-    aiEl.innerHTML = `<span style="color:var(--muted);font-size:12px">AI анализ для этого матча недоступен</span>`;
-  }
+  aiEl.innerHTML = `<div class="ai-loading"><div class="ai-spinner"></div><span>Анализирую матч...</span></div>`;
 
-  // Открыть
+  // Открыть модал сразу
   const modal = document.getElementById('match-modal');
   modal.classList.add('open');
   document.getElementById('modal-sheet').scrollTop = 0;
+
+  // Запрашиваем Gemini в фоне
+  const params = new URLSearchParams({
+    home: m.home, away: m.away, surface: 'clay',
+    ...(m.odds_home && { odds_home: m.odds_home }),
+    ...(m.odds_away && { odds_away: m.odds_away }),
+    ...(m.total_line && { total_line: m.total_line }),
+    ...(m.total_over && { total_over: m.total_over }),
+    ...(m.total_under && { total_under: m.total_under }),
+  });
+  fetch(`${API}/analyze?${params}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.ai_analysis) {
+        aiEl.innerHTML = `<div class="ai-body">${data.ai_analysis}</div>`;
+      } else {
+        aiEl.innerHTML = `<span style="color:var(--muted);font-size:12px">AI анализ недоступен</span>`;
+      }
+    })
+    .catch(() => {
+      aiEl.innerHTML = `<span style="color:var(--muted);font-size:12px">Ошибка загрузки AI анализа</span>`;
+    });
 
   // Закрыть при свайпе вниз
   let ty0 = 0;
