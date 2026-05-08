@@ -338,9 +338,21 @@ def gemini_analyze(home: str, away: str, our_prob: float,
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"temperature": 0.6, "maxOutputTokens": 500}
         }
-        r = requests.post(GEMINI_URL, json=body, timeout=20)
-        if r.status_code == 200:
-            return r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+        for attempt in range(2):
+            try:
+                r = requests.post(GEMINI_URL, json=body, timeout=45)
+                if r.status_code == 200:
+                    data = r.json()
+                    text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                    print(f"Gemini OK: {len(text)} символов")
+                    return text
+                else:
+                    print(f"Gemini HTTP {r.status_code}: {r.text[:200]}")
+            except requests.exceptions.Timeout:
+                print(f"Gemini timeout (попытка {attempt+1})")
+            except Exception as ex:
+                print(f"Gemini ошибка запроса: {ex}")
+                break
         return None
     except Exception as e:
         print(f"Gemini ошибка: {e}")
