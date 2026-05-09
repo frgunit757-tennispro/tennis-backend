@@ -1,7 +1,8 @@
 fastapi
-uvicorn
+uvicorn[standard]
 pandas
-scikit-learn==1.6.1
-python-telegram-bot
+numpy
+scikit-learn
 requests
 httpx
+beautifulsoup4
