@@ -24,6 +24,22 @@ GEMINI_URL   = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-
 
 TENNIS_SPORTS = ["tennis", "tennis_atp_italian_open", "tennis_wta_italian_open"]
 
+def get_active_tennis_sports():
+    """Динамически получаем все активные теннисные турниры из API"""
+    try:
+        r = requests.get(
+            f"https://api.the-odds-api.com/v4/sports/?apiKey={ODDS_API_KEY}",
+            timeout=10
+        )
+        if r.status_code == 200:
+            all_sports = r.json()
+            tennis = [s["key"] for s in all_sports if s.get("group") == "Tennis" and s.get("active") and not s.get("has_outrights")]
+            print(f"Active tennis sports: {tennis}")
+            return tennis if tennis else TENNIS_SPORTS
+    except Exception as e:
+        print(f"Error fetching sports: {e}")
+    return TENNIS_SPORTS
+
 ratings_df   = None
 atp_df       = None
 model_bundle = None
@@ -329,7 +345,8 @@ def head_to_head(p1: str, p2: str):
 @app.get("/upcoming")
 def get_upcoming():
     all_matches = []
-    for sport in TENNIS_SPORTS:
+    active_sports = get_active_tennis_sports()
+    for sport in active_sports:
         try:
             url = f"https://api.the-odds-api.com/v4/sports/{sport}/odds/?apiKey={ODDS_API_KEY}&regions=eu&markets=h2h,totals,spreads"
             r = requests.get(url, timeout=10)
