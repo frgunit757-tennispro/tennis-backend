@@ -1,11 +1,9 @@
 """
-Tennis Analyzer - Финальный сервер
-- Рейтинги игроков по Elo
-- Прогноз матча (ML модель)
-- H2H статистика
-- Матчи с коэффициентами букмекеров (the-odds-api)
-- 3 критерия: исход, тотал, сеты
-- Gemini ИИ анализ — только по запросу /analyze
+Tennis Analyzer - сервер
+- api-sports.io для матчей и расписания
+- stavka.tv для прогнозов капперов
+- ML модель для наших прогнозов
+- Gemini AI анализ по запросу /analyze
 """
 
 from fastapi import FastAPI, HTTPException
@@ -14,162 +12,20 @@ import pandas as pd
 import numpy as np
 import pickle
 import requests
+import re
 from pathlib import Path
 from contextlib import asynccontextmanager
-from bs4 import BeautifulSoup
-import re
-from datetime import datetime, date
+from datetime import datetime, timedelta
 
-DATA         = Path(".")
-ODDS_API_KEY = "7f2d9a6e51688c0e68bce9abca2876ba"
-GEMINI_KEY   = "AIzaSyC1EFzWSM4XRIDS1dcUYSzYlfEiE5yZoiM"
-GEMINI_URL   = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_KEY}"
-
-TENNIS_SPORTS = ["tennis", "tennis_atp_italian_open", "tennis_wta_italian_open"]
-
-def get_active_tennis_sports():
-    """Динамически получаем все активные теннисные турниры из API"""
-    try:
-        r = requests.get(
-            f"https://api.the-odds-api.com/v4/sports/?apiKey={ODDS_API_KEY}",
-            timeout=10
-        )
-        if r.status_code == 200:
-            all_sports = r.json()
-            tennis = [s["key"] for s in all_sports if s.get("group") == "Tennis" and s.get("active") and not s.get("has_outrights")]
-            print(f"Active tennis sports: {tennis}")
-            return tennis if tennis else TENNIS_SPORTS
-    except Exception as e:
-        print(f"Error fetching sports: {e}")
-    return TENNIS_SPORTS
-
-
-
-def parse_stavka_tv():
-    """Парсим матчи и прогнозы с stavka.tv/predictions/tennis"""
-    matches = {}
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml',
-            'Accept-Language': 'ru-RU,ru;q=0.9',
-        }
-        r = requests.get('https://stavka.tv/predictions/tennis', headers=headers, timeout=15)
-        if r.status_code != 200:
-            print(f"stavka.tv error: {r.status_code}")
-            return {}
-
-        soup = BeautifulSoup(r.text, 'html.parser')
-        tips = soup.find_all('a', href=re.compile(r'/matches/tennis/'))
-
-        seen = set()
-        for tip in tips:
-            href = tip.get('href', '')
-            match = re.search(r'/matches/tennis/(\d{2}-\d{2}-\d{4})-(.+?)(?:#|$)', href)
-            if not match:
-                continue
-            date_str = match.group(1)
-            slug = match.group(2)
-            key = slug
-
-            if key in seen:
-                continue
-            seen.add(key)
-
-            # Парсим имена игроков из slug
-            parts = slug.split('-')
-            # Ищем разделитель между игроками
-            mid = len(parts) // 2
-            # Пробуем угадать разделение
-            player1 = ' '.join(p.capitalize() for p in parts[:mid])
-            player2 = ' '.join(p.capitalize() for p in parts[mid:])
-
-            # Берём текст из ссылки
-            text = tip.get_text(separator=' ', strip=True)
-            # Ищем коэффициент
-            coef_match = re.search(r'(\d+\.\d+)', text)
-            coef = float(coef_match.group(1)) if coef_match else None
-
-            # Ищем тип ставки
-            bet_type = None
-            for bt in ['ПОБЕДА 1', 'ПОБЕДА 2', 'ТОТАЛ БОЛЬШЕ', 'ТОТАЛ МЕНЬШЕ', 'ФОРА']:
-                if bt in text.upper():
-                    bet_type = bt
-                    break
-
-            if key not in matches:
-                matches[key] = {
-                    'slug': slug,
-                    'date': date_str,
-                    'href': href,
-                    'tips': [],
-                    'player1_raw': player1,
-                    'player2_raw': player2,
-                }
-
-            if coef and bet_type:
-                matches[key]['tips'].append({
-                    'type': bet_type,
-                    'coef': coef,
-                    'text': text[:200],
-                })
-
-        print(f"stavka.tv: найдено {len(matches)} матчей")
-        return matches
-
-    except Exception as e:
-        print(f"stavka.tv parse error: {e}")
-        return {}
-
-
-def parse_match_page(slug: str):
-    """Парсим страницу конкретного матча на stavka.tv для получения коэффициентов"""
-    try:
-        today = datetime.now()
-        date_str = today.strftime('%d-%m-%Y')
-        url = f"https://stavka.tv/matches/tennis/{date_str}-{slug}"
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept-Language': 'ru-RU,ru;q=0.9',
-        }
-        r = requests.get(url, headers=headers, timeout=10)
-        if r.status_code != 200:
-            return {}
-
-        soup = BeautifulSoup(r.text, 'html.parser')
-        result = {}
-
-        # Ищем коэффициенты P1/P2
-        odds_blocks = soup.find_all(text=re.compile(r'^\d+\.\d+$'))
-        odds = [float(o.strip()) for o in odds_blocks if 1.01 < float(o.strip()) < 50]
-        if len(odds) >= 2:
-            result['odds_home'] = odds[0]
-            result['odds_away'] = odds[1]
-
-        # Ищем время матча
-        time_match = soup.find(text=re.compile(r'\d{2}:\d{2}'))
-        if time_match:
-            result['time'] = time_match.strip()[:5]
-
-        # Собираем все прогнозы капперов
-        all_tips = []
-        tip_blocks = soup.find_all('p')
-        for p in tip_blocks:
-            text = p.get_text(strip=True)
-            if len(text) > 20 and len(text) < 500:
-                all_tips.append(text)
-        result['capper_tips'] = all_tips[:5]
-
-        return result
-    except Exception as e:
-        print(f"Match page parse error: {e}")
-        return {}
-
+DATA              = Path(".")
+APISPORTS_KEY     = "393b1cec5d46358d928a03b4a9892e44"
+APISPORTS_URL     = "https://v1.tennis.api-sports.io"
+GEMINI_KEY        = "AIzaSyC1EFzWSM4XRIDS1dcUYSzYlfEiE5yZoiM"
+GEMINI_URL        = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_KEY}"
 
 ratings_df   = None
 atp_df       = None
 model_bundle = None
-
 
 def load_data():
     global ratings_df, atp_df, model_bundle
@@ -182,7 +38,6 @@ def load_data():
     except Exception as e:
         print(f"Load error: {e}")
 
-
 @asynccontextmanager
 async def lifespan(app):
     load_data()
@@ -191,6 +46,8 @@ async def lifespan(app):
 app = FastAPI(title="Tennis Analyzer API", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+
+# ─── HELPERS ───
 
 def find_player(name):
     if ratings_df is None: return None
@@ -202,11 +59,9 @@ def find_player(name):
             if not partial.empty: return partial.iloc[0]
     return None
 
-
 def get_elo(row, surface):
     col = {"hard":"elo_hard","clay":"elo_clay","grass":"elo_grass"}.get(surface,"elo_hard")
     return float(row[col]) if col in row.index else float(row["elo_hard"])
-
 
 def predict_winner(r1, r2, surface):
     if model_bundle is None: return None
@@ -220,7 +75,6 @@ def predict_winner(r1, r2, surface):
         "is_clay": int(surface=="clay"), "is_grass": int(surface=="grass"), "round_num": 4,
     }])[features]
     return float(clf.predict_proba(scaler.transform(X))[0][1])
-
 
 def get_player_stats(player_name):
     if atp_df is None: return {}
@@ -248,7 +102,6 @@ def get_player_stats(player_name):
         "matches_total": total,
     }
 
-
 def get_deep_stats_2024(player_name, surface="clay"):
     if atp_df is None: return {}
     as_winner = atp_df["winner_name"].str.contains(player_name, case=False, na=False)
@@ -256,9 +109,9 @@ def get_deep_stats_2024(player_name, surface="clay"):
     recent = atp_df[as_winner | as_loser]
     recent = recent[recent["tourney_date"].dt.year >= 2024].copy()
     if recent.empty: return {}
-    wins   = recent[recent["winner_name"].str.contains(player_name, case=False, na=False)]
+    wins  = recent[recent["winner_name"].str.contains(player_name, case=False, na=False)]
     losses = recent[recent["loser_name"].str.contains(player_name, case=False, na=False)]
-    total  = len(recent)
+    total = len(recent)
     surface_stats = {}
     for surf in ["Hard","Clay","Grass"]:
         sm = recent[recent["surface"]==surf]
@@ -308,18 +161,162 @@ def get_deep_stats_2024(player_name, surface="clay"):
         "serve": srv, "last_10": last10, "last_5_surface": surf5,
     }
 
-
 def analyze_value(our_prob, bk_odds):
     if not our_prob or not bk_odds: return {"has_value":False,"diff":0}
     bk_prob = 1/bk_odds
     diff = our_prob - bk_prob
-    return {"has_value":diff>0.05,"diff":round(diff*100,1),"our_prob_pct":round(our_prob*100,1),"bk_prob_pct":round(bk_prob*100,1)}
+    return {"has_value":diff>0.05,"diff":round(diff*100,1)}
 
+
+# ─── API-SPORTS.IO ───
+
+def apisports_get(endpoint, params={}):
+    headers = {
+        "x-apisports-key": APISPORTS_KEY,
+        "x-rapidapi-host": "v1.tennis.api-sports.io"
+    }
+    try:
+        r = requests.get(f"{APISPORTS_URL}/{endpoint}", headers=headers, params=params, timeout=15)
+        if r.status_code == 200:
+            return r.json()
+        print(f"api-sports error {r.status_code}: {r.text[:200]}")
+        return None
+    except Exception as e:
+        print(f"api-sports request error: {e}")
+        return None
+
+
+def get_today_matches():
+    """Получаем матчи на сегодня и завтра с api-sports.io"""
+    matches = []
+    today = datetime.now().strftime("%Y-%m-%d")
+    tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+
+    for date in [today, tomorrow]:
+        data = apisports_get("games", {"date": date})
+        if not data or not data.get("response"):
+            print(f"No matches for {date}")
+            continue
+
+        for game in data["response"]:
+            try:
+                p1 = game["players"]["home"]["name"]
+                p2 = game["players"]["away"]["name"]
+                tournament = game.get("tournament", {}).get("name", "ATP/WTA")
+                country    = game.get("country", {}).get("name", "")
+                surface    = game.get("tournament", {}).get("surface", "Hard").lower()
+                game_date  = game.get("date", today)[:10]
+                game_time  = game.get("time", "")
+                status     = game.get("status", {}).get("short", "NS")
+
+                # Пропускаем завершённые матчи
+                if status in ["FT", "Fin", "WO"]:
+                    continue
+
+                matches.append({
+                    "id":         game.get("id"),
+                    "home":       p1,
+                    "away":       p2,
+                    "tournament": tournament,
+                    "country":    country,
+                    "surface":    surface,
+                    "date":       game_date,
+                    "time":       game_time[:5] if game_time else "",
+                    "status":     status,
+                })
+            except Exception as e:
+                print(f"Game parse error: {e}")
+                continue
+
+        print(f"api-sports: {len(matches)} matches for {date}")
+
+    return matches
+
+
+def get_match_odds(game_id):
+    """Получаем коэффициенты для конкретного матча"""
+    data = apisports_get("odds", {"game": game_id})
+    if not data or not data.get("response"):
+        return {}
+
+    odds = {}
+    for bk in data["response"]:
+        for bet in bk.get("bets", []):
+            if bet["name"] == "Winner":
+                for val in bet.get("values", []):
+                    if val["value"] == "Home":
+                        odds["home"] = float(val["odd"])
+                    elif val["value"] == "Away":
+                        odds["away"] = float(val["odd"])
+            elif bet["name"] == "Total Games" and "total_line" not in odds:
+                for val in bet.get("values", []):
+                    if val["value"].startswith("Over"):
+                        odds["total_over"] = float(val["odd"])
+                        try: odds["total_line"] = float(val["value"].split()[-1])
+                        except: pass
+                    elif val["value"].startswith("Under"):
+                        odds["total_under"] = float(val["odd"])
+        if odds.get("home"): break
+
+    return odds
+
+
+# ─── STAVKA.TV PARSER ───
+
+def parse_stavka_predictions():
+    """Парсим прогнозы капперов с stavka.tv для обогащения анализа"""
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language": "ru-RU,ru;q=0.9",
+        }
+        r = requests.get("https://stavka.tv/predictions/tennis", headers=headers, timeout=12)
+        if r.status_code != 200:
+            return {}
+
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(r.text, "html.parser")
+        result = {}
+
+        for a in soup.find_all("a", href=re.compile(r"/matches/tennis/")):
+            href = a.get("href", "")
+            m = re.search(r"/matches/tennis/(\d{2}-\d{2}-\d{4})-(.+?)(?:#|$)", href)
+            if not m: continue
+            slug = m.group(2)
+            text = a.get_text(" ", strip=True)
+            coef = re.search(r"(\d+\.\d+)", text)
+            if slug not in result:
+                result[slug] = {"tips": [], "href": href}
+            if coef:
+                result[slug]["tips"].append(text[:200])
+
+        print(f"stavka.tv: {len(result)} predictions")
+        return result
+    except Exception as e:
+        print(f"stavka.tv error: {e}")
+        return {}
+
+
+def find_stavka_prediction(home, away, stavka_data):
+    """Ищем прогнозы по имени игрока"""
+    tips = []
+    for slug, data in stavka_data.items():
+        slug_lower = slug.lower()
+        h_last = home.split()[-1].lower()
+        a_last = away.split()[-1].lower()
+        if h_last in slug_lower or a_last in slug_lower:
+            tips.extend(data.get("tips", []))
+    return tips[:3]
+
+
+# ─── GEMINI ───
 
 def gemini_analyze(home, away, our_prob, avg_total, total_line, three_set_pct,
                    stats1, stats2, value_h2h, value_total,
                    deep1=None, deep2=None, surface="clay",
-                   odds_home=None, odds_away=None, total_over=None, total_under=None):
+                   odds_home=None, odds_away=None,
+                   total_over=None, total_under=None,
+                   stavka_tips=None):
     try:
         prob1 = round(our_prob*100) if our_prob else "?"
         prob2 = 100-prob1 if isinstance(prob1,int) else "?"
@@ -330,7 +327,7 @@ def gemini_analyze(home, away, our_prob, avg_total, total_line, three_set_pct,
             sf = {"clay":"Clay","hard":"Hard","grass":"Grass"}.get(surface,"Clay")
             sd = d.get("surface_stats",{}).get(sf,{})
             srv = d.get("serve",{})
-            srv_str = (f"1я подача {srv.get('first_serve_pct','?')}% | выигрыш {srv.get('first_serve_won','?')}% | эйсы {srv.get('aces_per_match','?')} | БП спасено {srv.get('bp_saved_pct','?')}%") if srv else "нет"
+            srv_str = f"1я подача {srv.get('first_serve_pct','?')}% | выигрыш {srv.get('first_serve_won','?')}% | эйсы {srv.get('aces_per_match','?')}" if srv else "нет"
             return (
                 f"  {name} (2024-2026, матчей:{d.get('total_matches',0)}):\n"
                 f"  - W/L: {d.get('wins','?')}/{d.get('losses','?')} ({d.get('win_pct','?')}%)\n"
@@ -348,6 +345,10 @@ def gemini_analyze(home, away, our_prob, avg_total, total_line, three_set_pct,
         three2 = (deep2 or {}).get("three_set_pct")
         three_best = round((three1+three2)/2,1) if three1 and three2 else three_set_pct
 
+        stavka_str = ""
+        if stavka_tips:
+            stavka_str = "\n-- ПРОГНОЗЫ КАППЕРОВ (stavka.tv) --\n" + "\n".join(f"• {t}" for t in stavka_tips)
+
         prompt = f"""Ты профессиональный теннисный аналитик. Используй реальную статистику ATP 2024-2026.
 
 МАТЧ: {home} vs {away} | Покрытие: {surf_ru.upper()}
@@ -359,15 +360,16 @@ def gemini_analyze(home, away, our_prob, avg_total, total_line, three_set_pct,
 - Вероятность: {home} {prob1}% | {away} {prob2}%
 - Avg тотал: {avg_best} | % в 3 сета: {three_best}%
 
--- КОЭФФИЦИЕНТЫ --
+-- КОЭФФИЦИЕНТЫ БУКМЕКЕРА --
 - {home}: {odds_home or '?'} | {away}: {odds_away or '?'}
-- Тотал {total_line or '?'}: O {total_over or '?'} / U {total_under or '?'}
+- Тотал {total_line or '?'}: О {total_over or '?'} / У {total_under or '?'}
 
--- АНАЛИЗ --
+-- НАШ АНАЛИЗ --
 - Исход: {value_h2h or 'нет данных'}
 - Тотал: {value_total or 'нет данных'}
+{stavka_str}
 
-Дай краткий анализ по 3 критериям на русском языке.
+Дай краткий анализ на русском по 3 критериям. Опирайся на статистику.
 
 ФОРМАТ:
 🏆 Исход: [кто победит и почему, есть ли value у букмекера?]
@@ -377,7 +379,7 @@ def gemini_analyze(home, away, our_prob, avg_total, total_line, three_set_pct,
 
 Не финансовый совет."""
 
-        body = {"contents":[{"parts":[{"text":prompt}]}],"generationConfig":{"temperature":0.6,"maxOutputTokens":500}}
+        body = {"contents":[{"parts":[{"text":prompt}]}],"generationConfig":{"temperature":0.7,"maxOutputTokens":600}}
         for attempt in range(2):
             try:
                 r = requests.post(GEMINI_URL, json=body, timeout=45)
@@ -398,16 +400,16 @@ def gemini_analyze(home, away, our_prob, avg_total, total_line, three_set_pct,
         return None
 
 
+# ─── ENDPOINTS ───
+
 @app.api_route("/", methods=["GET","HEAD"])
 def root():
     return {"status":"ok","service":"Tennis Analyzer API"}
-
 
 @app.get("/players")
 def get_players():
     if ratings_df is None: raise HTTPException(503, "Data not loaded")
     return sorted(ratings_df[ratings_df["matches_total"]>=20]["player"].tolist())
-
 
 @app.get("/ratings")
 def get_ratings(surface: str = "hard", limit: int = 30):
@@ -416,7 +418,6 @@ def get_ratings(surface: str = "hard", limit: int = 30):
     df = ratings_df[ratings_df["matches_total"]>=30].copy()
     df = df.sort_values(col, ascending=False).head(limit)
     return [{"player":row["player"],"elo":round(row[col],0),"form":round(row["form"],3),"matches_total":int(row["matches_total"])} for _,row in df.iterrows()]
-
 
 @app.get("/predict")
 def predict_match(p1: str, p2: str, surface: str = "hard"):
@@ -443,7 +444,6 @@ def predict_match(p1: str, p2: str, surface: str = "hard"):
         "avg_total":avg_total,"three_set_pct":three_set,
     }
 
-
 @app.get("/h2h")
 def head_to_head(p1: str, p2: str):
     if atp_df is None: raise HTTPException(503, "Data not loaded")
@@ -467,138 +467,92 @@ def head_to_head(p1: str, p2: str):
         recent.append({"date":str(row["tourney_date"].date()),"tourney":row.get("tourney_name",""),"surface":row.get("surface",""),"round":row.get("round",""),"winner":row["winner_name"],"score":row.get("score","")})
     return {"player1":name1,"player2":name2,"wins1":wins1,"wins2":wins2,"total":len(h2h),"by_surface":by_surface,"recent":recent}
 
-
 @app.get("/upcoming")
 def get_upcoming():
-    """Матчи с stavka.tv — парсим прогнозы капперов + наш ML анализ"""
+    """Матчи на сегодня/завтра с api-sports.io + наш ML анализ"""
     all_matches = []
 
-    try:
-        stavka_matches = parse_stavka_tv()
-        today_str = datetime.now().strftime('%d-%m-%Y')
-        tomorrow_str = (datetime.now().replace(day=datetime.now().day+1)).strftime('%d-%m-%Y')
+    games = get_today_matches()
+    if not games:
+        print("No games from api-sports.io")
+        return []
 
-        for key, m in stavka_matches.items():
-            # Берём только сегодняшние и завтрашние матчи
-            if m['date'] not in [today_str, tomorrow_str]:
-                try:
-                    # Проверяем дату
-                    match_date = datetime.strptime(m['date'], '%d-%m-%Y')
-                    if abs((match_date - datetime.now()).days) > 2:
-                        continue
-                except:
-                    continue
+    for g in games:
+        home    = g["home"]
+        away    = g["away"]
+        surface = g.get("surface", "clay")
 
-            tips = m.get('tips', [])
+        our_prob, avg_total, three_set_p = None, None, None
+        value_h2h, value_total, value_set = None, None, None
+        odds_home, odds_away = None, None
+        total_line, total_over, total_under = None, None, None
 
-            # Извлекаем коэффициенты из прогнозов
-            odds_home, odds_away, total_line, total_over, total_under = None, None, None, None, None
-            capper_tips_text = []
+        # Коэффициенты
+        if g.get("id"):
+            odds = get_match_odds(g["id"])
+            odds_home   = odds.get("home")
+            odds_away   = odds.get("away")
+            total_line  = odds.get("total_line")
+            total_over  = odds.get("total_over")
+            total_under = odds.get("total_under")
 
-            for tip in tips:
-                coef = tip.get('coef')
-                btype = tip.get('type', '')
-                text = tip.get('text', '')
-                if coef:
-                    if 'ПОБЕДА 1' in btype and not odds_home:
-                        odds_home = coef
-                    elif 'ПОБЕДА 2' in btype and not odds_away:
-                        odds_away = coef
-                    elif 'ТОТАЛ БОЛЬШЕ' in btype and not total_over:
-                        total_over = coef
-                        import re as _re
-                        tl = _re.search(r'\((\d+\.?\d*)\)', text)
-                        if tl: total_line = float(tl.group(1))
-                    elif 'ТОТАЛ МЕНЬШЕ' in btype and not total_under:
-                        total_under = coef
-                if text:
-                    capper_tips_text.append(f"[{btype} @{coef}] {text[:120]}")
+        # ML анализ
+        if ratings_df is not None and model_bundle is not None:
+            r1 = find_player(home.split()[-1])
+            r2 = find_player(away.split()[-1])
+            if r1 is not None and r2 is not None:
+                our_prob = predict_winner(r1, r2, surface)
+                stats1   = get_player_stats(r1["player"])
+                stats2   = get_player_stats(r2["player"])
+                deep1    = get_deep_stats_2024(r1["player"], surface)
+                deep2    = get_deep_stats_2024(r2["player"], surface)
+                avg_t1 = deep1.get("avg_total_games")
+                avg_t2 = deep2.get("avg_total_games")
+                if avg_t1 and avg_t2: avg_total = round((avg_t1+avg_t2)/2,1)
+                elif stats1.get("avg_total") and stats2.get("avg_total"): avg_total = round((stats1["avg_total"]+stats2["avg_total"])/2,1)
+                three1 = deep1.get("three_set_pct")
+                three2 = deep2.get("three_set_pct")
+                if three1 and three2: three_set_p = round((three1+three2)/2,1)
+                elif stats1.get("three_set_pct") and stats2.get("three_set_pct"): three_set_p = round((stats1["three_set_pct"]+stats2["three_set_pct"])/2,1)
+                if our_prob and odds_home:
+                    v = analyze_value(our_prob, odds_home)
+                    if v["has_value"]: value_h2h = f"✅ {home.split()[-1]} (+{v['diff']}%)"
+                    elif odds_away and analyze_value(1-our_prob,odds_away)["has_value"]:
+                        v2 = analyze_value(1-our_prob,odds_away)
+                        value_h2h = f"✅ {away.split()[-1]} (+{v2['diff']}%)"
+                    else: value_h2h = "⚪ Нет value"
+                if avg_total and total_line:
+                    value_total = f"📊 БОЛЬШЕ {total_line} (avg:{avg_total})" if avg_total>float(total_line) else f"📊 МЕНЬШЕ {total_line} (avg:{avg_total})"
+                if three_set_p is not None:
+                    value_set = f"🎾 3 сета ({three_set_p}%)" if three_set_p>50 else f"🎾 2 сета ({100-three_set_p:.0f}%)"
 
-            # Определяем имена игроков из slug
-            slug = m['slug']
-            parts = slug.replace('-', ' ').split()
-            # Пробуем найти игроков в нашей базе
-            home_name, away_name = None, None
-            if ratings_df is not None:
-                for i in range(1, len(parts)):
-                    candidate1 = ' '.join(parts[:i]).title()
-                    candidate2 = ' '.join(parts[i:]).title()
-                    r1 = find_player(candidate1.split()[-1])
-                    r2 = find_player(candidate2.split()[-1])
-                    if r1 is not None and r2 is not None:
-                        home_name = r1['player']
-                        away_name = r2['player']
-                        break
-
-            if not home_name:
-                # Fallback — делим slug пополам
-                mid = len(parts) // 2
-                home_name = ' '.join(p.capitalize() for p in parts[:mid])
-                away_name = ' '.join(p.capitalize() for p in parts[mid:])
-
-            # ML анализ
-            our_prob, avg_total, three_set_p = None, None, None
-            value_h2h, value_total, value_set = None, None, None
-
-            if ratings_df is not None and model_bundle is not None:
-                r1 = find_player(home_name.split()[-1])
-                r2 = find_player(away_name.split()[-1])
-                if r1 is not None and r2 is not None:
-                    our_prob = predict_winner(r1, r2, "clay")
-                    stats1 = get_player_stats(r1["player"])
-                    stats2 = get_player_stats(r2["player"])
-                    deep1 = get_deep_stats_2024(r1["player"], "clay")
-                    deep2 = get_deep_stats_2024(r2["player"], "clay")
-                    avg_t1 = deep1.get("avg_total_games")
-                    avg_t2 = deep2.get("avg_total_games")
-                    if avg_t1 and avg_t2: avg_total = round((avg_t1+avg_t2)/2,1)
-                    elif stats1.get("avg_total") and stats2.get("avg_total"): avg_total = round((stats1["avg_total"]+stats2["avg_total"])/2,1)
-                    three1 = deep1.get("three_set_pct")
-                    three2 = deep2.get("three_set_pct")
-                    if three1 and three2: three_set_p = round((three1+three2)/2,1)
-                    elif stats1.get("three_set_pct") and stats2.get("three_set_pct"): three_set_p = round((stats1["three_set_pct"]+stats2["three_set_pct"])/2,1)
-                    if our_prob and odds_home:
-                        v = analyze_value(our_prob, odds_home)
-                        if v["has_value"]: value_h2h = f"ok {home_name.split()[-1]} (+{v['diff']}%)"
-                        elif odds_away and analyze_value(1-our_prob,odds_away)["has_value"]:
-                            v2 = analyze_value(1-our_prob,odds_away)
-                            value_h2h = f"ok {away_name.split()[-1]} (+{v2['diff']}%)"
-                        else: value_h2h = "no value"
-                    if avg_total and total_line:
-                        value_total = f"BOLSHE {total_line} (avg:{avg_total})" if avg_total>float(total_line) else f"MENSHE {total_line} (avg:{avg_total})"
-                    if three_set_p is not None:
-                        value_set = f"3 sets ({three_set_p}%)" if three_set_p>50 else f"2 sets ({100-three_set_p:.0f}%)"
-
-            all_matches.append({
-                "home": home_name,
-                "away": away_name,
-                "date": m['date'],
-                "time": "",
-                "bookmaker": "stavka.tv",
-                "tournament": "ATP/WTA",
-                "odds_home": odds_home,
-                "odds_away": odds_away,
-                "total_line": total_line,
-                "total_over": total_over,
-                "total_under": total_under,
-                "spread_home": None,
-                "spread_away": None,
-                "our_prob": round(our_prob,4) if our_prob else None,
-                "avg_total": avg_total,
-                "three_set_pct": three_set_p,
-                "value_h2h": value_h2h,
-                "value_total": value_total,
-                "value_set": value_set,
-                "capper_tips": capper_tips_text[:3],
-                "stavka_url": f"https://stavka.tv{m['href']}",
-                "ai_analysis": None,
-            })
-
-    except Exception as e:
-        print(f"Upcoming error: {e}")
+        all_matches.append({
+            "home":          home,
+            "away":          away,
+            "date":          g["date"],
+            "time":          g["time"],
+            "bookmaker":     "api-sports.io",
+            "tournament":    g["tournament"],
+            "country":       g.get("country",""),
+            "surface":       surface,
+            "game_id":       g.get("id"),
+            "odds_home":     odds_home,
+            "odds_away":     odds_away,
+            "total_line":    total_line,
+            "total_over":    total_over,
+            "total_under":   total_under,
+            "our_prob":      round(our_prob,4) if our_prob else None,
+            "avg_total":     avg_total,
+            "three_set_pct": three_set_p,
+            "value_h2h":     value_h2h,
+            "value_total":   value_total,
+            "value_set":     value_set,
+            "ai_analysis":   None,
+        })
 
     print(f"Returning {len(all_matches)} matches")
     return all_matches
+
 
 @app.get("/analyze")
 def analyze_match(
@@ -630,20 +584,25 @@ def analyze_match(
             if three1 and three2: three_set_p = round((three1+three2)/2,1)
             if our_prob and odds_home:
                 v = analyze_value(our_prob, odds_home)
-                if v["has_value"]: value_h2h = f"ok {home.split()[-1]} (+{v['diff']}%)"
+                if v["has_value"]: value_h2h = f"✅ {home.split()[-1]} (+{v['diff']}%)"
                 elif odds_away and analyze_value(1-our_prob,odds_away)["has_value"]:
                     v2 = analyze_value(1-our_prob,odds_away)
-                    value_h2h = f"ok {away.split()[-1]} (+{v2['diff']}%)"
-                else: value_h2h = "no value"
+                    value_h2h = f"✅ {away.split()[-1]} (+{v2['diff']}%)"
+                else: value_h2h = "⚪ Нет value"
             if avg_total and total_line:
-                value_total = f"BOLSHE {total_line} (avg:{avg_total})" if avg_total>float(total_line) else f"MENSHE {total_line} (avg:{avg_total})"
+                value_total = f"📊 БОЛЬШЕ {total_line} (avg:{avg_total})" if avg_total>float(total_line) else f"📊 МЕНЬШЕ {total_line} (avg:{avg_total})"
+
+    # Прогнозы с stavka.tv
+    stavka_data = parse_stavka_predictions()
+    stavka_tips = find_stavka_prediction(home, away, stavka_data)
 
     ai_text = gemini_analyze(
         home, away, our_prob, avg_total, total_line, three_set_p,
         stats1, stats2, value_h2h, value_total,
         deep1=deep1, deep2=deep2, surface=surface,
         odds_home=odds_home, odds_away=odds_away,
-        total_over=total_over, total_under=total_under
+        total_over=total_over, total_under=total_under,
+        stavka_tips=stavka_tips
     )
     return {
         "ai_analysis":   ai_text,
@@ -652,6 +611,7 @@ def analyze_match(
         "three_set_pct": three_set_p,
         "value_h2h":     value_h2h,
         "value_total":   value_total,
+        "stavka_tips":   stavka_tips,
     }
 
 
