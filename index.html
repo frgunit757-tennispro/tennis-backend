@@ -519,15 +519,21 @@ body {
       <div class="criteria-card" id="m-criteria"></div>
     </div>
 
+    <!-- Прогнозы stavka.tv -->
+    <div class="msec" id="msec-stavka" style="display:none">
+      <div class="msec-title">Прогнозы капперов (stavka.tv)</div>
+      <div id="m-stavka" style="background:var(--card);border-radius:12px;padding:12px 14px"></div>
+    </div>
+
     <!-- Gemini AI -->
     <div class="msec">
-      <div class="msec-title">Gemini AI анализ</div>
+      <div class="msec-title">🤖 Gemini AI анализ</div>
       <div class="ai-card">
         <div class="ai-header">
           <div class="ai-icon">🤖</div>
           <div>
             <div class="ai-label">Gemini AI</div>
-            <div class="ai-sublabel">ATP статистика 2024–2026</div>
+            <div class="ai-sublabel">ATP статистика 2024–2026 + stavka.tv</div>
           </div>
         </div>
         <div id="m-ai"></div>
@@ -913,35 +919,49 @@ function openModal(idx) {
       </div>
     </div>`;
 
-  // Gemini AI — запрашиваем на лету
+  // Gemini AI + stavka.tv — запрашиваем на лету
   const aiEl = document.getElementById('m-ai');
-  aiEl.innerHTML = `<div class="ai-loading"><div class="ai-spinner"></div><span>Анализирую матч...</span></div>`;
+  const stavkaEl = document.getElementById('m-stavka');
+  const msecStavka = document.getElementById('msec-stavka');
+  aiEl.innerHTML = `<div class="ai-loading"><div class="ai-spinner"></div><span>Анализирую матч... (~10 сек)</span></div>`;
+  msecStavka.style.display = 'none';
 
-  // Открыть модал сразу
+  // Открыть модал сразу — пользователь видит наши данные пока грузится Gemini
   const modal = document.getElementById('match-modal');
   modal.classList.add('open');
   document.getElementById('modal-sheet').scrollTop = 0;
 
-  // Запрашиваем Gemini в фоне
+  // Запрашиваем Gemini + stavka.tv в фоне
   const params = new URLSearchParams({
-    home: m.home, away: m.away, surface: 'clay',
+    home: m.home, away: m.away,
+    surface: m.surface || 'clay',
     ...(m.odds_home && { odds_home: m.odds_home }),
     ...(m.odds_away && { odds_away: m.odds_away }),
     ...(m.total_line && { total_line: m.total_line }),
     ...(m.total_over && { total_over: m.total_over }),
     ...(m.total_under && { total_under: m.total_under }),
   });
+
   fetch(`${API}/analyze?${params}`)
     .then(r => r.json())
     .then(data => {
+      // Показываем прогнозы stavka.tv
+      if (data.stavka_tips && data.stavka_tips.length > 0) {
+        msecStavka.style.display = 'block';
+        stavkaEl.innerHTML = data.stavka_tips.map(t =>
+          `<div style="font-size:11px;color:var(--muted);padding:6px 0;border-bottom:0.5px solid var(--border);line-height:1.5">${t}</div>`
+        ).join('');
+      }
+      // Показываем Gemini анализ
       if (data.ai_analysis) {
         aiEl.innerHTML = `<div class="ai-body">${data.ai_analysis}</div>`;
       } else {
-        aiEl.innerHTML = `<span style="color:var(--muted);font-size:12px">AI анализ недоступен</span>`;
+        aiEl.innerHTML = `<span style="color:var(--muted);font-size:12px">AI анализ недоступен — проверь Gemini API ключ</span>`;
       }
     })
-    .catch(() => {
-      aiEl.innerHTML = `<span style="color:var(--muted);font-size:12px">Ошибка загрузки AI анализа</span>`;
+    .catch(err => {
+      console.error('Analyze error:', err);
+      aiEl.innerHTML = `<span style="color:var(--muted);font-size:12px">Ошибка загрузки анализа</span>`;
     });
 
   // Закрыть при свайпе вниз
