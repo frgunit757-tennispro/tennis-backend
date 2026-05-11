@@ -19,8 +19,10 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 
 DATA              = Path(".")
-# Sofascore — основной источник матчей
-SOFASCORE_URL = "https://api.sofascore.com/api/v1"
+# RapidAPI Tennis ATP WTA ITF
+RAPIDAPI_KEY  = "969a506e07msh448e524eb8f1fecp1d349ajsnf996b2300cc1"
+RAPIDAPI_HOST = "tennis-api-atp-wta-itf.p.rapidapi.com"
+RAPIDAPI_URL  = "https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2"
 GEMINI_KEY        = "AIzaSyC1EFzWSM4XRIDS1dcUYSzYlfEiE5yZoiM"
 GEMINI_URL        = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_KEY}"
 
@@ -171,114 +173,154 @@ def analyze_value(our_prob, bk_odds):
 
 # ─── API-SPORTS.IO ───
 
-def get_sofascore_headers():
+def rapidapi_headers():
     return {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/json",
-        "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8",
-        "Referer": "https://www.sofascore.com/",
-        "Origin": "https://www.sofascore.com",
-        "Cache-Control": "no-cache",
+        "x-rapidapi-key":  RAPIDAPI_KEY,
+        "x-rapidapi-host": RAPIDAPI_HOST,
+        "Content-Type":    "application/json",
     }
 
 
 def get_today_matches():
-    """Матчи ATP/WTA на сегодня и завтра с Sofascore — стабильно 24/7"""
+    """Матчи ATP/WTA на сегодня и завтра с RapidAPI Tennis ATP WTA ITF"""
     matches = []
-    headers = get_sofascore_headers()
+    headers = rapidapi_headers()
 
     for offset in [0, 1]:
         date = (datetime.now() + timedelta(days=offset)).strftime("%Y-%m-%d")
         try:
-            # Sofascore API для тенниса (sport id=5)
-            url = f"{SOFASCORE_URL}/sport/tennis/scheduled-events/{date}"
+            url = f"{RAPIDAPI_URL}/atp/fixture/date/{date}"
             r = requests.get(url, headers=headers, timeout=15)
+            print(f"RapidAPI ATP {date}: {r.status_code}")
 
-            if r.status_code != 200:
-                print(f"Sofascore error {r.status_code} for {date}")
-                continue
-
-            data = r.json()
-            events = data.get("events", [])
-            print(f"Sofascore: {len(events)} events for {date}")
-
-            for ev in events:
-                try:
-                    status = ev.get("status", {}).get("type", "")
-                    # Пропускаем завершённые
-                    if status in ["finished", "canceled", "postponed"]:
+            if r.status_code == 200:
+                data = r.json()
+                fixtures = data.get("fixtures", data.get("results", data if isinstance(data, list) else []))
+                print(f"ATP fixtures for {date}: {len(fixtures)}")
+                for fix in fixtures:
+                    try:
+                        home = fix.get("home", fix.get("player1", {}) if isinstance(fix.get("player1"), dict) else {})
+                        away = fix.get("away", fix.get("player2", {}) if isinstance(fix.get("player2"), dict) else {})
+                        if isinstance(home, dict):
+                            home_name = home.get("name", home.get("fullName", ""))
+                        else:
+                            home_name = str(fix.get("player1", ""))
+                        if isinstance(away, dict):
+                            away_name = away.get("name", away.get("fullName", ""))
+                        else:
+                            away_name = str(fix.get("player2", ""))
+                        if not home_name or not away_name:
+                            continue
+                        tournament = fix.get("tournament", {}).get("name", "ATP") if isinstance(fix.get("tournament"), dict) else str(fix.get("tournament", "ATP"))
+                        surface_raw = str(fix.get("surface", fix.get("court", {}).get("surface", "Hard") if isinstance(fix.get("court"), dict) else "Hard"))
+                        surface_map = {"hard": "hard", "clay": "clay", "grass": "grass", "indoor hard": "hard", "carpet": "hard"}
+                        surface = surface_map.get(surface_raw.lower(), "hard")
+                        start_time = fix.get("startAt", fix.get("date", fix.get("time", "")))
+                        try:
+                            if "T" in str(start_time):
+                                dt = datetime.fromisoformat(str(start_time).replace("Z", "+00:00"))
+                                time_str = dt.strftime("%H:%M")
+                            else:
+                                time_str = str(start_time)[:5] if start_time else ""
+                        except:
+                            time_str = ""
+                        status = str(fix.get("status", fix.get("state", "NS"))).lower()
+                        if any(s in status for s in ["finish", "complet", "cancel"]):
+                            continue
+                        matches.append({
+                            "id":         fix.get("id", fix.get("fixtureId")),
+                            "home":       home_name,
+                            "away":       away_name,
+                            "tournament": tournament,
+                            "country":    "",
+                            "surface":    surface,
+                            "date":       date,
+                            "time":       time_str,
+                            "status":     status,
+                        })
+                    except Exception as e:
+                        print(f"Fixture parse error: {e}")
                         continue
 
-                    home = ev.get("homeTeam", {}).get("name", "")
-                    away = ev.get("awayTeam", {}).get("name", "")
-                    if not home or not away:
+            # Также пробуем WTA
+            url_wta = f"{RAPIDAPI_URL}/wta/fixture/date/{date}"
+            r2 = requests.get(url_wta, headers=headers, timeout=15)
+            print(f"RapidAPI WTA {date}: {r2.status_code}")
+            if r2.status_code == 200:
+                data2 = r2.json()
+                fixtures2 = data2.get("fixtures", data2.get("results", data2 if isinstance(data2, list) else []))
+                for fix in fixtures2:
+                    try:
+                        home = fix.get("home", fix.get("player1", {}))
+                        away = fix.get("away", fix.get("player2", {}))
+                        home_name = home.get("name", "") if isinstance(home, dict) else str(home)
+                        away_name = away.get("name", "") if isinstance(away, dict) else str(away)
+                        if not home_name or not away_name:
+                            continue
+                        tournament = fix.get("tournament", {}).get("name", "WTA") if isinstance(fix.get("tournament"), dict) else "WTA"
+                        surface_raw = str(fix.get("surface", "Hard"))
+                        surface = {"hard":"hard","clay":"clay","grass":"grass"}.get(surface_raw.lower(), "hard")
+                        start_time = fix.get("startAt", fix.get("date", ""))
+                        try:
+                            if "T" in str(start_time):
+                                dt = datetime.fromisoformat(str(start_time).replace("Z", "+00:00"))
+                                time_str = dt.strftime("%H:%M")
+                            else:
+                                time_str = str(start_time)[:5]
+                        except:
+                            time_str = ""
+                        status = str(fix.get("status", "NS")).lower()
+                        if any(s in status for s in ["finish", "complet", "cancel"]):
+                            continue
+                        matches.append({
+                            "id": fix.get("id"), "home": home_name, "away": away_name,
+                            "tournament": tournament, "country": "", "surface": surface,
+                            "date": date, "time": time_str, "status": status,
+                        })
+                    except:
                         continue
-
-                    tournament = ev.get("tournament", {}).get("name", "Tennis")
-                    category   = ev.get("tournament", {}).get("category", {}).get("name", "")
-                    ts         = ev.get("startTimestamp", 0)
-                    dt         = datetime.fromtimestamp(ts) if ts else datetime.now()
-                    surface_raw = ev.get("groundType", "")
-                    surface_map = {"HARD": "hard", "CLAY": "clay", "GRASS": "grass", "INDOOR": "hard"}
-                    surface     = surface_map.get(surface_raw.upper(), "hard")
-
-                    matches.append({
-                        "id":         ev.get("id"),
-                        "home":       home,
-                        "away":       away,
-                        "tournament": tournament,
-                        "country":    category,
-                        "surface":    surface,
-                        "date":       dt.strftime("%Y-%m-%d"),
-                        "time":       dt.strftime("%H:%M"),
-                        "status":     status,
-                    })
-                except Exception as e:
-                    print(f"Event parse error: {e}")
-                    continue
 
         except Exception as e:
-            print(f"Sofascore fetch error for {date}: {e}")
+            print(f"RapidAPI fetch error {date}: {e}")
             continue
 
     print(f"Total matches: {len(matches)}")
     return matches
 
 
-def get_sofascore_odds(event_id):
-    """Коэффициенты для матча с Sofascore"""
-    if not event_id:
+def get_rapidapi_odds(fixture_id):
+    """Коэффициенты для матча"""
+    if not fixture_id:
         return {}
     try:
-        headers = get_sofascore_headers()
-        url = f"{SOFASCORE_URL}/event/{event_id}/odds/1/all"
+        headers = rapidapi_headers()
+        url = f"{RAPIDAPI_URL}/atp/odds/{fixture_id}"
         r = requests.get(url, headers=headers, timeout=10)
         if r.status_code != 200:
             return {}
         data = r.json()
         odds = {}
-        for market in data.get("markets", []):
-            if market.get("marketName") in ["Full time", "Winner", "Match Winner"]:
-                for choice in market.get("choices", []):
-                    name = choice.get("name", "")
-                    frac = choice.get("fractionalValue", "")
+        items = data.get("odds", data.get("results", []))
+        for item in items:
+            name = item.get("name", item.get("market", ""))
+            if "winner" in str(name).lower() or "match" in str(name).lower():
+                vals = item.get("values", item.get("selections", []))
+                for v in vals:
+                    label = str(v.get("name", v.get("label", ""))).lower()
+                    price = v.get("odd", v.get("price", v.get("value")))
                     try:
-                        if "/" in str(frac):
-                            n, d = frac.split("/")
-                            dec = round(int(n)/int(d) + 1, 2)
-                        else:
-                            dec = float(frac)
-                        if name == "1" or name == "Home":
-                            odds["home"] = dec
-                        elif name == "2" or name == "Away":
-                            odds["away"] = dec
+                        price = float(price)
+                        if "home" in label or "1" == label:
+                            odds["home"] = price
+                        elif "away" in label or "2" == label:
+                            odds["away"] = price
                     except:
                         pass
-                if odds.get("home"):
-                    break
+            if odds.get("home"):
+                break
         return odds
     except Exception as e:
-        print(f"Sofascore odds error: {e}")
+        print(f"Odds error: {e}")
         return {}
 
 
@@ -510,7 +552,7 @@ def get_upcoming():
 
         # Коэффициенты с Sofascore
         if g.get("id"):
-            odds = get_sofascore_odds(g["id"])
+            odds = get_rapidapi_odds(g["id"])
             odds_home = odds.get("home")
             odds_away = odds.get("away")
         total_line, total_over, total_under = None, None, None
@@ -550,7 +592,7 @@ def get_upcoming():
             "away":          away,
             "date":          g["date"],
             "time":          g["time"],
-            "bookmaker": "Sofascore",
+            "bookmaker": "RapidAPI",
             "tournament":    g["tournament"],
             "country":       g.get("country",""),
             "surface":       surface,
