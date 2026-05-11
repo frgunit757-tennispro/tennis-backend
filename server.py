@@ -189,7 +189,7 @@ def get_today_matches():
     for offset in [0, 1]:
         date = (datetime.now() + timedelta(days=offset)).strftime("%Y-%m-%d")
         try:
-            url = f"{RAPIDAPI_URL}/atp/fixture/date/{date}"
+            url = f"{RAPIDAPI_URL}/atp/fixtures/{date}"
             r = requests.get(url, headers=headers, timeout=15)
             print(f"RapidAPI ATP {date}: {r.status_code}")
 
@@ -243,7 +243,7 @@ def get_today_matches():
                         continue
 
             # Также пробуем WTA
-            url_wta = f"{RAPIDAPI_URL}/wta/fixture/date/{date}"
+            url_wta = f"{RAPIDAPI_URL}/wta/fixtures/{date}"
             r2 = requests.get(url_wta, headers=headers, timeout=15)
             print(f"RapidAPI WTA {date}: {r2.status_code}")
             if r2.status_code == 200:
