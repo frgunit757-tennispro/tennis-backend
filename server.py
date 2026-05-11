@@ -1,6 +1,6 @@
 """
 Tennis Analyzer - сервер
-- api-sports.io для матчей и расписания
+- Sofascore для матчей и расписания (стабильно 24/7)
 - stavka.tv для прогнозов капперов
 - ML модель для наших прогнозов
 - Gemini AI анализ по запросу /analyze
@@ -13,13 +13,14 @@ import numpy as np
 import pickle
 import requests
 import re
+import json
 from pathlib import Path
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 
 DATA              = Path(".")
-APISPORTS_KEY     = "393b1cec5d46358d928a03b4a9892e44"
-APISPORTS_URL     = "https://v1.tennis.api-sports.io"
+# Sofascore — основной источник матчей
+SOFASCORE_URL = "https://api.sofascore.com/api/v1"
 GEMINI_KEY        = "AIzaSyC1EFzWSM4XRIDS1dcUYSzYlfEiE5yZoiM"
 GEMINI_URL        = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_KEY}"
 
@@ -170,95 +171,115 @@ def analyze_value(our_prob, bk_odds):
 
 # ─── API-SPORTS.IO ───
 
-def apisports_get(endpoint, params={}):
-    headers = {
-        "x-apisports-key": APISPORTS_KEY,
-        "x-rapidapi-host": "v1.tennis.api-sports.io"
+def get_sofascore_headers():
+    return {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json",
+        "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8",
+        "Referer": "https://www.sofascore.com/",
+        "Origin": "https://www.sofascore.com",
+        "Cache-Control": "no-cache",
     }
-    try:
-        r = requests.get(f"{APISPORTS_URL}/{endpoint}", headers=headers, params=params, timeout=15)
-        if r.status_code == 200:
-            return r.json()
-        print(f"api-sports error {r.status_code}: {r.text[:200]}")
-        return None
-    except Exception as e:
-        print(f"api-sports request error: {e}")
-        return None
 
 
 def get_today_matches():
-    """Получаем матчи на сегодня и завтра с api-sports.io"""
+    """Матчи ATP/WTA на сегодня и завтра с Sofascore — стабильно 24/7"""
     matches = []
-    today = datetime.now().strftime("%Y-%m-%d")
-    tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+    headers = get_sofascore_headers()
 
-    for date in [today, tomorrow]:
-        data = apisports_get("games", {"date": date})
-        if not data or not data.get("response"):
-            print(f"No matches for {date}")
-            continue
+    for offset in [0, 1]:
+        date = (datetime.now() + timedelta(days=offset)).strftime("%Y-%m-%d")
+        try:
+            # Sofascore API для тенниса (sport id=5)
+            url = f"{SOFASCORE_URL}/sport/tennis/scheduled-events/{date}"
+            r = requests.get(url, headers=headers, timeout=15)
 
-        for game in data["response"]:
-            try:
-                p1 = game["players"]["home"]["name"]
-                p2 = game["players"]["away"]["name"]
-                tournament = game.get("tournament", {}).get("name", "ATP/WTA")
-                country    = game.get("country", {}).get("name", "")
-                surface    = game.get("tournament", {}).get("surface", "Hard").lower()
-                game_date  = game.get("date", today)[:10]
-                game_time  = game.get("time", "")
-                status     = game.get("status", {}).get("short", "NS")
-
-                # Пропускаем завершённые матчи
-                if status in ["FT", "Fin", "WO"]:
-                    continue
-
-                matches.append({
-                    "id":         game.get("id"),
-                    "home":       p1,
-                    "away":       p2,
-                    "tournament": tournament,
-                    "country":    country,
-                    "surface":    surface,
-                    "date":       game_date,
-                    "time":       game_time[:5] if game_time else "",
-                    "status":     status,
-                })
-            except Exception as e:
-                print(f"Game parse error: {e}")
+            if r.status_code != 200:
+                print(f"Sofascore error {r.status_code} for {date}")
                 continue
 
-        print(f"api-sports: {len(matches)} matches for {date}")
+            data = r.json()
+            events = data.get("events", [])
+            print(f"Sofascore: {len(events)} events for {date}")
 
+            for ev in events:
+                try:
+                    status = ev.get("status", {}).get("type", "")
+                    # Пропускаем завершённые
+                    if status in ["finished", "canceled", "postponed"]:
+                        continue
+
+                    home = ev.get("homeTeam", {}).get("name", "")
+                    away = ev.get("awayTeam", {}).get("name", "")
+                    if not home or not away:
+                        continue
+
+                    tournament = ev.get("tournament", {}).get("name", "Tennis")
+                    category   = ev.get("tournament", {}).get("category", {}).get("name", "")
+                    ts         = ev.get("startTimestamp", 0)
+                    dt         = datetime.fromtimestamp(ts) if ts else datetime.now()
+                    surface_raw = ev.get("groundType", "")
+                    surface_map = {"HARD": "hard", "CLAY": "clay", "GRASS": "grass", "INDOOR": "hard"}
+                    surface     = surface_map.get(surface_raw.upper(), "hard")
+
+                    matches.append({
+                        "id":         ev.get("id"),
+                        "home":       home,
+                        "away":       away,
+                        "tournament": tournament,
+                        "country":    category,
+                        "surface":    surface,
+                        "date":       dt.strftime("%Y-%m-%d"),
+                        "time":       dt.strftime("%H:%M"),
+                        "status":     status,
+                    })
+                except Exception as e:
+                    print(f"Event parse error: {e}")
+                    continue
+
+        except Exception as e:
+            print(f"Sofascore fetch error for {date}: {e}")
+            continue
+
+    print(f"Total matches: {len(matches)}")
     return matches
 
 
-def get_match_odds(game_id):
-    """Получаем коэффициенты для конкретного матча"""
-    data = apisports_get("odds", {"game": game_id})
-    if not data or not data.get("response"):
+def get_sofascore_odds(event_id):
+    """Коэффициенты для матча с Sofascore"""
+    if not event_id:
         return {}
-
-    odds = {}
-    for bk in data["response"]:
-        for bet in bk.get("bets", []):
-            if bet["name"] == "Winner":
-                for val in bet.get("values", []):
-                    if val["value"] == "Home":
-                        odds["home"] = float(val["odd"])
-                    elif val["value"] == "Away":
-                        odds["away"] = float(val["odd"])
-            elif bet["name"] == "Total Games" and "total_line" not in odds:
-                for val in bet.get("values", []):
-                    if val["value"].startswith("Over"):
-                        odds["total_over"] = float(val["odd"])
-                        try: odds["total_line"] = float(val["value"].split()[-1])
-                        except: pass
-                    elif val["value"].startswith("Under"):
-                        odds["total_under"] = float(val["odd"])
-        if odds.get("home"): break
-
-    return odds
+    try:
+        headers = get_sofascore_headers()
+        url = f"{SOFASCORE_URL}/event/{event_id}/odds/1/all"
+        r = requests.get(url, headers=headers, timeout=10)
+        if r.status_code != 200:
+            return {}
+        data = r.json()
+        odds = {}
+        for market in data.get("markets", []):
+            if market.get("marketName") in ["Full time", "Winner", "Match Winner"]:
+                for choice in market.get("choices", []):
+                    name = choice.get("name", "")
+                    frac = choice.get("fractionalValue", "")
+                    try:
+                        if "/" in str(frac):
+                            n, d = frac.split("/")
+                            dec = round(int(n)/int(d) + 1, 2)
+                        else:
+                            dec = float(frac)
+                        if name == "1" or name == "Home":
+                            odds["home"] = dec
+                        elif name == "2" or name == "Away":
+                            odds["away"] = dec
+                    except:
+                        pass
+                if odds.get("home"):
+                    break
+        return odds
+    except Exception as e:
+        print(f"Sofascore odds error: {e}")
+        return {}
 
 
 # ─── STAVKA.TV PARSER ───
@@ -487,14 +508,12 @@ def get_upcoming():
         odds_home, odds_away = None, None
         total_line, total_over, total_under = None, None, None
 
-        # Коэффициенты
+        # Коэффициенты с Sofascore
         if g.get("id"):
-            odds = get_match_odds(g["id"])
-            odds_home   = odds.get("home")
-            odds_away   = odds.get("away")
-            total_line  = odds.get("total_line")
-            total_over  = odds.get("total_over")
-            total_under = odds.get("total_under")
+            odds = get_sofascore_odds(g["id"])
+            odds_home = odds.get("home")
+            odds_away = odds.get("away")
+        total_line, total_over, total_under = None, None, None
 
         # ML анализ
         if ratings_df is not None and model_bundle is not None:
@@ -531,7 +550,7 @@ def get_upcoming():
             "away":          away,
             "date":          g["date"],
             "time":          g["time"],
-            "bookmaker":     "api-sports.io",
+            "bookmaker": "Sofascore",
             "tournament":    g["tournament"],
             "country":       g.get("country",""),
             "surface":       surface,
