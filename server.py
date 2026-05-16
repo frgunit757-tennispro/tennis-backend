@@ -182,62 +182,64 @@ def rapidapi_headers():
 
 
 def get_today_matches():
-    """Матчи ATP/WTA на сегодня и завтра с RapidAPI (getDateFixtures)"""
+    """Матчи ATP/WTA с Sofascore — без API ключа, стабильно"""
     matches = []
-    headers = rapidapi_headers()
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8",
+        "Origin": "https://www.sofascore.com",
+        "Referer": "https://www.sofascore.com/",
+    }
+    surface_map = {"hard": "hard", "clay": "clay", "grass": "grass",
+                   "indoor hard": "hard", "carpet": "hard"}
 
     for offset in [0, 1]:
         date = (datetime.now() + timedelta(days=offset)).strftime("%Y-%m-%d")
-        for tour_type in ["atp", "wta"]:
-            try:
-                url = f"{RAPIDAPI_URL}/{tour_type}/date-fixtures/{date}"
-                r = requests.get(url, headers=headers, timeout=15)
-                print(f"RapidAPI {tour_type.upper()} {date}: {r.status_code}")
-                if r.status_code != 200:
-                    continue
-                data = r.json()
-                fixtures = data.get("data", [])
-                print(f"{tour_type.upper()} fixtures for {date}: {len(fixtures)}")
-
-                for fix in fixtures:
-                    try:
-                        p1 = fix.get("player1", {})
-                        p2 = fix.get("player2", {})
-                        home_name = p1.get("name", "") if isinstance(p1, dict) else str(p1)
-                        away_name = p2.get("name", "") if isinstance(p2, dict) else str(p2)
-                        if not home_name or not away_name:
-                            continue
-
-                        # Время из ISO даты
-                        raw_date = fix.get("date") or fix.get("timeGame", "")
-                        time_str = ""
-                        try:
-                            if raw_date and "T" in str(raw_date):
-                                dt = datetime.fromisoformat(str(raw_date).replace("Z", "+00:00"))
-                                # конвертируем UTC+5 (Астана)
-                                dt_local = dt.astimezone(timezone.utc) + timedelta(hours=5)
-                                time_str = dt_local.strftime("%H:%M")
-                        except:
-                            pass
-
-                        matches.append({
-                            "id":         fix.get("id"),
-                            "home":       home_name,
-                            "away":       away_name,
-                            "tournament": str(fix.get("tournamentId", tour_type.upper())),
-                            "country":    "",
-                            "surface":    "hard",  # API не возвращает покрытие
-                            "date":       date,
-                            "time":       time_str,
-                            "status":     "ns",
-                        })
-                    except Exception as e:
-                        print(f"Fixture parse error: {e}")
-                        continue
-
-            except Exception as e:
-                print(f"RapidAPI fetch error {tour_type} {date}: {e}")
+        try:
+            url = f"https://api.sofascore.com/api/v1/sport/tennis/scheduled-events/{date}"
+            r = requests.get(url, headers=headers, timeout=15)
+            print(f"Sofascore {date}: {r.status_code}")
+            if r.status_code != 200:
+                print(f"Sofascore error: {r.text[:300]}")
                 continue
+            events = r.json().get("events", [])
+            print(f"Sofascore events {date}: {len(events)}")
+            for ev in events:
+                try:
+                    status_type = ev.get("status", {}).get("type", "")
+                    if status_type in ("finished", "canceled", "postponed"):
+                        continue
+                    home_name = ev.get("homeTeam", {}).get("name", "")
+                    away_name = ev.get("awayTeam", {}).get("name", "")
+                    if not home_name or not away_name:
+                        continue
+                    tournament = ev.get("tournament", {}).get("name", "Tennis")
+                    category   = ev.get("tournament", {}).get("category", {}).get("name", "")
+                    ground  = str(ev.get("groundType", "")).lower()
+                    surface = surface_map.get(ground, "hard")
+                    ts = ev.get("startTimestamp", 0)
+                    try:
+                        time_str = datetime.utcfromtimestamp(ts).strftime("%H:%M")
+                    except:
+                        time_str = ""
+                    matches.append({
+                        "id":         ev.get("id"),
+                        "home":       home_name,
+                        "away":       away_name,
+                        "tournament": tournament,
+                        "country":    category,
+                        "surface":    surface,
+                        "date":       date,
+                        "time":       time_str,
+                        "status":     status_type,
+                    })
+                except Exception as e:
+                    print(f"Event parse error: {e}")
+                    continue
+        except Exception as e:
+            print(f"Sofascore fetch error {date}: {e}")
+            continue
 
     print(f"Total matches: {len(matches)}")
     return matches
