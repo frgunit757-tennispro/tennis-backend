@@ -182,142 +182,104 @@ def rapidapi_headers():
 
 
 def get_today_matches():
-    """Матчи ATP/WTA на сегодня и завтра с RapidAPI Tennis ATP WTA ITF"""
+    """Матчи ATP/WTA на сегодня и завтра с RapidAPI (getDateFixtures)"""
     matches = []
     headers = rapidapi_headers()
 
     for offset in [0, 1]:
         date = (datetime.now() + timedelta(days=offset)).strftime("%Y-%m-%d")
-        try:
-            url = f"{RAPIDAPI_URL}/atp/fixtures/{date}"
-            r = requests.get(url, headers=headers, timeout=15)
-            print(f"RapidAPI ATP {date}: {r.status_code}")
-
-            if r.status_code == 200:
+        for tour_type in ["atp", "wta"]:
+            try:
+                url = f"{RAPIDAPI_URL}/{tour_type}/date-fixtures/{date}"
+                r = requests.get(url, headers=headers, timeout=15)
+                print(f"RapidAPI {tour_type.upper()} {date}: {r.status_code}")
+                if r.status_code != 200:
+                    continue
                 data = r.json()
-                fixtures = data.get("fixtures", data.get("results", data if isinstance(data, list) else []))
-                print(f"ATP fixtures for {date}: {len(fixtures)}")
+                fixtures = data.get("data", [])
+                print(f"{tour_type.upper()} fixtures for {date}: {len(fixtures)}")
+
                 for fix in fixtures:
                     try:
-                        home = fix.get("home", fix.get("player1", {}) if isinstance(fix.get("player1"), dict) else {})
-                        away = fix.get("away", fix.get("player2", {}) if isinstance(fix.get("player2"), dict) else {})
-                        if isinstance(home, dict):
-                            home_name = home.get("name", home.get("fullName", ""))
-                        else:
-                            home_name = str(fix.get("player1", ""))
-                        if isinstance(away, dict):
-                            away_name = away.get("name", away.get("fullName", ""))
-                        else:
-                            away_name = str(fix.get("player2", ""))
+                        p1 = fix.get("player1", {})
+                        p2 = fix.get("player2", {})
+                        home_name = p1.get("name", "") if isinstance(p1, dict) else str(p1)
+                        away_name = p2.get("name", "") if isinstance(p2, dict) else str(p2)
                         if not home_name or not away_name:
                             continue
-                        tournament = fix.get("tournament", {}).get("name", "ATP") if isinstance(fix.get("tournament"), dict) else str(fix.get("tournament", "ATP"))
-                        surface_raw = str(fix.get("surface", fix.get("court", {}).get("surface", "Hard") if isinstance(fix.get("court"), dict) else "Hard"))
-                        surface_map = {"hard": "hard", "clay": "clay", "grass": "grass", "indoor hard": "hard", "carpet": "hard"}
-                        surface = surface_map.get(surface_raw.lower(), "hard")
-                        start_time = fix.get("startAt", fix.get("date", fix.get("time", "")))
+
+                        # Время из ISO даты
+                        raw_date = fix.get("date") or fix.get("timeGame", "")
+                        time_str = ""
                         try:
-                            if "T" in str(start_time):
-                                dt = datetime.fromisoformat(str(start_time).replace("Z", "+00:00"))
-                                time_str = dt.strftime("%H:%M")
-                            else:
-                                time_str = str(start_time)[:5] if start_time else ""
+                            if raw_date and "T" in str(raw_date):
+                                dt = datetime.fromisoformat(str(raw_date).replace("Z", "+00:00"))
+                                # конвертируем UTC+5 (Астана)
+                                from datetime import timezone
+                                dt_local = dt.astimezone(timezone.utc) + timedelta(hours=5)
+                                time_str = dt_local.strftime("%H:%M")
                         except:
-                            time_str = ""
-                        status = str(fix.get("status", fix.get("state", "NS"))).lower()
-                        if any(s in status for s in ["finish", "complet", "cancel"]):
-                            continue
+                            pass
+
                         matches.append({
-                            "id":         fix.get("id", fix.get("fixtureId")),
+                            "id":         fix.get("id"),
                             "home":       home_name,
                             "away":       away_name,
-                            "tournament": tournament,
+                            "tournament": str(fix.get("tournamentId", tour_type.upper())),
                             "country":    "",
-                            "surface":    surface,
+                            "surface":    "hard",  # API не возвращает покрытие
                             "date":       date,
                             "time":       time_str,
-                            "status":     status,
+                            "status":     "ns",
                         })
                     except Exception as e:
                         print(f"Fixture parse error: {e}")
                         continue
 
-            # Также пробуем WTA
-            url_wta = f"{RAPIDAPI_URL}/wta/fixtures/{date}"
-            r2 = requests.get(url_wta, headers=headers, timeout=15)
-            print(f"RapidAPI WTA {date}: {r2.status_code}")
-            if r2.status_code == 200:
-                data2 = r2.json()
-                fixtures2 = data2.get("fixtures", data2.get("results", data2 if isinstance(data2, list) else []))
-                for fix in fixtures2:
-                    try:
-                        home = fix.get("home", fix.get("player1", {}))
-                        away = fix.get("away", fix.get("player2", {}))
-                        home_name = home.get("name", "") if isinstance(home, dict) else str(home)
-                        away_name = away.get("name", "") if isinstance(away, dict) else str(away)
-                        if not home_name or not away_name:
-                            continue
-                        tournament = fix.get("tournament", {}).get("name", "WTA") if isinstance(fix.get("tournament"), dict) else "WTA"
-                        surface_raw = str(fix.get("surface", "Hard"))
-                        surface = {"hard":"hard","clay":"clay","grass":"grass"}.get(surface_raw.lower(), "hard")
-                        start_time = fix.get("startAt", fix.get("date", ""))
-                        try:
-                            if "T" in str(start_time):
-                                dt = datetime.fromisoformat(str(start_time).replace("Z", "+00:00"))
-                                time_str = dt.strftime("%H:%M")
-                            else:
-                                time_str = str(start_time)[:5]
-                        except:
-                            time_str = ""
-                        status = str(fix.get("status", "NS")).lower()
-                        if any(s in status for s in ["finish", "complet", "cancel"]):
-                            continue
-                        matches.append({
-                            "id": fix.get("id"), "home": home_name, "away": away_name,
-                            "tournament": tournament, "country": "", "surface": surface,
-                            "date": date, "time": time_str, "status": status,
-                        })
-                    except:
-                        continue
-
-        except Exception as e:
-            print(f"RapidAPI fetch error {date}: {e}")
-            continue
+            except Exception as e:
+                print(f"RapidAPI fetch error {tour_type} {date}: {e}")
+                continue
 
     print(f"Total matches: {len(matches)}")
     return matches
 
 
 def get_rapidapi_odds(fixture_id):
-    """Коэффициенты для матча"""
+    """Коэффициенты для матча с Sofascore"""
     if not fixture_id:
         return {}
     try:
-        headers = rapidapi_headers()
-        url = f"{RAPIDAPI_URL}/atp/odds/{fixture_id}"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/json",
+            "Referer": "https://www.sofascore.com/",
+        }
+        url = f"https://api.sofascore.com/api/v1/event/{fixture_id}/odds/1/all"
         r = requests.get(url, headers=headers, timeout=10)
         if r.status_code != 200:
             return {}
         data = r.json()
         odds = {}
-        items = data.get("odds", data.get("results", []))
-        for item in items:
-            name = item.get("name", item.get("market", ""))
-            if "winner" in str(name).lower() or "match" in str(name).lower():
-                vals = item.get("values", item.get("selections", []))
-                for v in vals:
-                    label = str(v.get("name", v.get("label", ""))).lower()
-                    price = v.get("odd", v.get("price", v.get("value")))
+        markets = data.get("markets", [])
+        for market in markets:
+            if market.get("marketId") == 1:  # Match winner
+                for choice in market.get("choices", []):
+                    name = str(choice.get("name", "")).lower()
+                    frac = choice.get("fractionalValue", "")
                     try:
-                        price = float(price)
-                        if "home" in label or "1" == label:
-                            odds["home"] = price
-                        elif "away" in label or "2" == label:
-                            odds["away"] = price
+                        if "/" in str(frac):
+                            a, b = frac.split("/")
+                            decimal = round(int(a)/int(b) + 1, 2)
+                        else:
+                            decimal = float(frac)
+                        if "home" in name or "1" == name:
+                            odds["home"] = decimal
+                        elif "away" in name or "2" == name:
+                            odds["away"] = decimal
                     except:
                         pass
-            if odds.get("home"):
-                break
+                if odds:
+                    break
         return odds
     except Exception as e:
         print(f"Odds error: {e}")
