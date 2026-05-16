@@ -494,82 +494,36 @@ def head_to_head(p1: str, p2: str):
 
 @app.get("/upcoming")
 def get_upcoming():
-    """Матчи на сегодня/завтра с api-sports.io + наш ML анализ"""
-    all_matches = []
-
+    """Только список матчей — быстро, без ML.
+    Весь анализ (ML + Gemini) считается в /analyze по клику на матч."""
     games = get_today_matches()
     if not games:
-        print("No games from api-sports.io")
+        print("No games from RapidAPI")
         return []
 
+    all_matches = []
     for g in games:
-        home    = g["home"]
-        away    = g["away"]
-        surface = g.get("surface", "clay")
-
-        our_prob, avg_total, three_set_p = None, None, None
-        value_h2h, value_total, value_set = None, None, None
-        odds_home, odds_away = None, None
-        total_line, total_over, total_under = None, None, None
-
-        # Коэффициенты с Sofascore
-        if g.get("id"):
-            odds = get_rapidapi_odds(g["id"])
-            odds_home = odds.get("home")
-            odds_away = odds.get("away")
-        total_line, total_over, total_under = None, None, None
-
-        # ML анализ
-        if ratings_df is not None and model_bundle is not None:
-            r1 = find_player(home.split()[-1])
-            r2 = find_player(away.split()[-1])
-            if r1 is not None and r2 is not None:
-                our_prob = predict_winner(r1, r2, surface)
-                stats1   = get_player_stats(r1["player"])
-                stats2   = get_player_stats(r2["player"])
-                deep1    = get_deep_stats_2024(r1["player"], surface)
-                deep2    = get_deep_stats_2024(r2["player"], surface)
-                avg_t1 = deep1.get("avg_total_games")
-                avg_t2 = deep2.get("avg_total_games")
-                if avg_t1 and avg_t2: avg_total = round((avg_t1+avg_t2)/2,1)
-                elif stats1.get("avg_total") and stats2.get("avg_total"): avg_total = round((stats1["avg_total"]+stats2["avg_total"])/2,1)
-                three1 = deep1.get("three_set_pct")
-                three2 = deep2.get("three_set_pct")
-                if three1 and three2: three_set_p = round((three1+three2)/2,1)
-                elif stats1.get("three_set_pct") and stats2.get("three_set_pct"): three_set_p = round((stats1["three_set_pct"]+stats2["three_set_pct"])/2,1)
-                if our_prob and odds_home:
-                    v = analyze_value(our_prob, odds_home)
-                    if v["has_value"]: value_h2h = f"✅ {home.split()[-1]} (+{v['diff']}%)"
-                    elif odds_away and analyze_value(1-our_prob,odds_away)["has_value"]:
-                        v2 = analyze_value(1-our_prob,odds_away)
-                        value_h2h = f"✅ {away.split()[-1]} (+{v2['diff']}%)"
-                    else: value_h2h = "⚪ Нет value"
-                if avg_total and total_line:
-                    value_total = f"📊 БОЛЬШЕ {total_line} (avg:{avg_total})" if avg_total>float(total_line) else f"📊 МЕНЬШЕ {total_line} (avg:{avg_total})"
-                if three_set_p is not None:
-                    value_set = f"🎾 3 сета ({three_set_p}%)" if three_set_p>50 else f"🎾 2 сета ({100-three_set_p:.0f}%)"
-
         all_matches.append({
-            "home":          home,
-            "away":          away,
+            "home":          g["home"],
+            "away":          g["away"],
             "date":          g["date"],
             "time":          g["time"],
-            "bookmaker": "RapidAPI",
+            "bookmaker":     "RapidAPI",
             "tournament":    g["tournament"],
-            "country":       g.get("country",""),
-            "surface":       surface,
+            "country":       g.get("country", ""),
+            "surface":       g.get("surface", "hard"),
             "game_id":       g.get("id"),
-            "odds_home":     odds_home,
-            "odds_away":     odds_away,
-            "total_line":    total_line,
-            "total_over":    total_over,
-            "total_under":   total_under,
-            "our_prob":      round(our_prob,4) if our_prob else None,
-            "avg_total":     avg_total,
-            "three_set_pct": three_set_p,
-            "value_h2h":     value_h2h,
-            "value_total":   value_total,
-            "value_set":     value_set,
+            "odds_home":     None,
+            "odds_away":     None,
+            "total_line":    None,
+            "total_over":    None,
+            "total_under":   None,
+            "our_prob":      None,
+            "avg_total":     None,
+            "three_set_pct": None,
+            "value_h2h":     None,
+            "value_total":   None,
+            "value_set":     None,
             "ai_analysis":   None,
         })
 
