@@ -16,7 +16,7 @@ import re
 import json
 from pathlib import Path
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 DATA              = Path(".")
 # RapidAPI Tennis ATP WTA ITF
@@ -215,7 +215,6 @@ def get_today_matches():
                             if raw_date and "T" in str(raw_date):
                                 dt = datetime.fromisoformat(str(raw_date).replace("Z", "+00:00"))
                                 # конвертируем UTC+5 (Астана)
-                                from datetime import timezone
                                 dt_local = dt.astimezone(timezone.utc) + timedelta(hours=5)
                                 time_str = dt_local.strftime("%H:%M")
                         except:
