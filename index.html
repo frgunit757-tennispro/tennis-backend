@@ -981,11 +981,12 @@ function handleOverlayClick(e) {
   if (e.target === document.getElementById('match-modal')) closeModal();
 }
 
-// Загрузка матчей при переходе на вкладку
+// Загрузка матчей только при переходе на вкладку (не при старте)
 document.querySelectorAll('.nav-item').forEach(item => {
-  if (item.dataset.page === 'matches') item.addEventListener('click', loadMatches);
+  if (item.dataset.page === 'matches') item.addEventListener('click', () => {
+    if (!cachedMatches.length) loadMatches();
+  });
 });
-loadMatches();
 
 // Toggles
 document.querySelectorAll('.toggle').forEach(t => t.addEventListener('click', () => t.classList.toggle('off')));
