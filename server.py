@@ -53,12 +53,22 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 # ─── HELPERS ───
 
 def find_player(name):
+    """Поиск игрока — поддерживает 'S. Tsitsipas', 'Tsitsipas', 'Stefanos Tsitsipas'"""
     if ratings_df is None: return None
+    # 1. Точное совпадение
     exact = ratings_df[ratings_df["player"] == name]
     if not exact.empty: return exact.iloc[0]
-    for part in name.split():
+    # 2. Поиск по частям имени (длиннее 3 букв = фамилия)
+    parts = [p.strip(".") for p in name.split()]
+    for part in parts:
         if len(part) > 3:
             partial = ratings_df[ratings_df["player"].str.contains(part, case=False, na=False)]
+            if not partial.empty: return partial.iloc[0]
+    # 3. Если имя типа "S. Baez" — берём последнее слово
+    if len(parts) >= 2:
+        last = parts[-1]
+        if len(last) > 2:
+            partial = ratings_df[ratings_df["player"].str.contains(last, case=False, na=False)]
             if not partial.empty: return partial.iloc[0]
     return None
 
@@ -422,15 +432,21 @@ def gemini_analyze(home, away, our_prob, avg_total, total_line, three_set_pct,
 Не финансовый совет."""
 
         body = {"contents":[{"parts":[{"text":prompt}]}],"generationConfig":{"temperature":0.7,"maxOutputTokens":600}}
-        for attempt in range(2):
+        import time
+        for attempt in range(3):
             try:
                 r = requests.post(GEMINI_URL, json=body, timeout=45)
                 if r.status_code == 200:
                     text = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
                     print(f"Gemini OK: {len(text)} chars")
                     return text
+                elif r.status_code == 429:
+                    wait = 65 if attempt == 0 else 120
+                    print(f"Gemini 429 — ждём {wait}с (попытка {attempt+1})")
+                    time.sleep(wait)
                 else:
                     print(f"Gemini HTTP {r.status_code}: {r.text[:200]}")
+                    break
             except requests.exceptions.Timeout:
                 print(f"Gemini timeout attempt {attempt+1}")
             except Exception as ex:
