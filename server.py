@@ -181,64 +181,80 @@ def rapidapi_headers():
     }
 
 
+API_TENNIS_KEY = "b9df98d011c5c08a4e542879a9441b346cf7ddb68f8f363d3a6a5b5439b35369"
+API_TENNIS_URL = "https://api.api-tennis.com/tennis/"
+
+
 def get_today_matches():
-    """Матчи ATP/WTA с Sofascore — без API ключа, стабильно"""
+    """Матчи ATP/WTA с api-tennis.com — бесплатный план"""
     matches = []
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
-        "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8",
-        "Origin": "https://www.sofascore.com",
-        "Referer": "https://www.sofascore.com/",
-    }
-    surface_map = {"hard": "hard", "clay": "clay", "grass": "grass",
-                   "indoor hard": "hard", "carpet": "hard"}
 
     for offset in [0, 1]:
         date = (datetime.now() + timedelta(days=offset)).strftime("%Y-%m-%d")
         try:
-            url = f"https://api.sofascore.com/api/v1/sport/tennis/scheduled-events/{date}"
-            r = requests.get(url, headers=headers, timeout=15)
-            print(f"Sofascore {date}: {r.status_code}")
+            params = {
+                "method":     "get_fixtures",
+                "APIkey":     API_TENNIS_KEY,
+                "date_start": date,
+                "date_stop":  date,
+            }
+            r = requests.get(API_TENNIS_URL, params=params, timeout=15)
+            print(f"api-tennis.com {date}: {r.status_code}")
             if r.status_code != 200:
-                print(f"Sofascore error: {r.text[:300]}")
+                print(f"api-tennis error: {r.text[:200]}")
                 continue
-            events = r.json().get("events", [])
-            print(f"Sofascore events {date}: {len(events)}")
+
+            data = r.json()
+            if not data.get("success"):
+                print(f"api-tennis no success: {data}")
+                continue
+
+            events = data.get("result", [])
+            print(f"api-tennis events {date}: {len(events)}")
+
             for ev in events:
                 try:
-                    status_type = ev.get("status", {}).get("type", "")
-                    if status_type in ("finished", "canceled", "postponed"):
-                        continue
-                    home_name = ev.get("homeTeam", {}).get("name", "")
-                    away_name = ev.get("awayTeam", {}).get("name", "")
+                    home_name = ev.get("event_first_player", "")
+                    away_name = ev.get("event_second_player", "")
                     if not home_name or not away_name:
                         continue
-                    tournament = ev.get("tournament", {}).get("name", "Tennis")
-                    category   = ev.get("tournament", {}).get("category", {}).get("name", "")
-                    ground  = str(ev.get("groundType", "")).lower()
-                    surface = surface_map.get(ground, "hard")
-                    ts = ev.get("startTimestamp", 0)
-                    try:
-                        time_str = datetime.utcfromtimestamp(ts).strftime("%H:%M")
-                    except:
-                        time_str = ""
+
+                    # Пропускаем завершённые
+                    status = str(ev.get("event_status", "")).lower()
+                    if status in ("finished", "canceled", "atp", "wta"):
+                        pass  # оставляем
+
+                    tournament = ev.get("tournament_name", ev.get("league_name", "Tennis"))
+                    event_type = str(ev.get("event_type", "")).lower()
+
+                    # Покрытие из названия турнира
+                    name_lower = tournament.lower()
+                    if any(w in name_lower for w in ["clay", "roland", "rome", "madrid", "monte", "barcelona"]):
+                        surface = "clay"
+                    elif any(w in name_lower for w in ["grass", "wimbledon", "halle", "queens"]):
+                        surface = "grass"
+                    else:
+                        surface = "hard"
+
+                    time_str = ev.get("event_time", "")
+
                     matches.append({
-                        "id":         ev.get("id"),
+                        "id":         ev.get("event_key"),
                         "home":       home_name,
                         "away":       away_name,
                         "tournament": tournament,
-                        "country":    category,
+                        "country":    ev.get("country_name", ""),
                         "surface":    surface,
                         "date":       date,
                         "time":       time_str,
-                        "status":     status_type,
+                        "status":     status,
                     })
                 except Exception as e:
                     print(f"Event parse error: {e}")
                     continue
+
         except Exception as e:
-            print(f"Sofascore fetch error {date}: {e}")
+            print(f"api-tennis fetch error {date}: {e}")
             continue
 
     print(f"Total matches: {len(matches)}")
