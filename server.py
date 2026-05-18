@@ -23,7 +23,7 @@ DATA              = Path(".")
 RAPIDAPI_KEY  = "969a506e07msh448e524eb8f1fecp1d349ajsnf996b2300cc1"
 RAPIDAPI_HOST = "tennis-api-atp-wta-itf.p.rapidapi.com"
 RAPIDAPI_URL  = "https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2"
-GEMINI_KEY        = "AIzaSyC1EFzWSM4XRIDS1dcUYSzYlfEiE5yZoiM"
+GEMINI_KEY        = "AIzaSyCM4UvAcHj_5JFUL5PhuHDgmD_ftFNcpDs"
 GEMINI_URL        = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_KEY}"
 
 ratings_df   = None
@@ -583,8 +583,19 @@ def analyze_match(
                     v2 = analyze_value(1-our_prob,odds_away)
                     value_h2h = f"✅ {away.split()[-1]} (+{v2['diff']}%)"
                 else: value_h2h = "⚪ Нет value"
+            elif our_prob:
+                h_last = home.split()[-1]
+                a_last = away.split()[-1]
+                if our_prob >= 0.65:
+                    value_h2h = f"✅ Фаворит: {h_last} ({round(our_prob*100)}%)"
+                elif our_prob <= 0.35:
+                    value_h2h = f"✅ Фаворит: {a_last} ({round((1-our_prob)*100)}%)"
+                else:
+                    value_h2h = f"⚪ Равная игра ({h_last} {round(our_prob*100)}% / {a_last} {round((1-our_prob)*100)}%)"
             if avg_total and total_line:
                 value_total = f"📊 БОЛЬШЕ {total_line} (avg:{avg_total})" if avg_total>float(total_line) else f"📊 МЕНЬШЕ {total_line} (avg:{avg_total})"
+            elif avg_total:
+                value_total = f"📊 Средний тотал: {avg_total} геймов"
 
     # Прогнозы с stavka.tv
     stavka_data = parse_stavka_predictions()
